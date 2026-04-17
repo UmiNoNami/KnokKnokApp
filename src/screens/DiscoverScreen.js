@@ -8,7 +8,7 @@ import { useAppState } from '../providers/AppProvider';
 import { colors } from '../theme/colors';
 
 export default function DiscoverScreen({ navigation }) {
-  const { selectedMode } = useAppState();
+  const { selectedMode } = useApp();
   const [mode, setMode] = useState(selectedMode === 'property' ? 'houses' : 'people');
 
   return (

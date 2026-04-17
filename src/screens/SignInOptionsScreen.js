@@ -1,6 +1,7 @@
 import React from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 import AppScreen from '../components/AppScreen';
+import CustomButton from '../components/CustomButton';
 
 export default function SignInOptionsScreen({ navigation }) {
   return (
@@ -12,24 +13,24 @@ export default function SignInOptionsScreen({ navigation }) {
           resizeMode="contain"
         />
 
-        <View style={styles.buttonContainer}>
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              // later: add Google sign in
-            }}
-          >
-            <Text style={styles.buttonText}>Sign in with Google</Text>
-          </Pressable>
+        <Text style={styles.title}>Welcome</Text>
 
-          <Pressable
-            style={styles.button}
-            onPress={() => {
-              // later: navigate to phone sign in screen
-            }}
-          >
-            <Text style={styles.buttonText}>Sign In with Phone number</Text>
-          </Pressable>
+        <Text style={styles.description}>
+          by Taping to create account or Sign In, you agree to our Terms,
+          Learn how we process your data in out Privacy Policy
+        </Text>
+
+        <View style={styles.buttonContainer}>
+          <CustomButton
+            title="Sign in with Google"
+            onPress={() => {}}
+          />
+
+            <CustomButton
+               title="Sign in with Phone"
+                onPress={() => navigation.navigate('PhoneNumber')}
+                 style={{ marginTop: 24 }}
+                    />
         </View>
       </View>
     </AppScreen>
@@ -39,38 +40,35 @@ export default function SignInOptionsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F3F1',
+    backgroundColor: '#F4F4F4',
+    paddingHorizontal: 32,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 32,
   },
   logo: {
-    width: 130,
-    height: 130,
-    marginBottom: 140,
+    width: 140,
+    height: 160,
+    marginBottom: 56,
+  },
+  title: {
+    fontSize: 36,
+    fontWeight: '800',
+    color: '#000',
+    marginBottom: 28,
+    textShadowColor: 'rgba(0,0,0,0.18)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 3,
+  },
+  description: {
+    fontSize: 15,
+    color: '#222',
+    textAlign: 'left',
+    lineHeight: 31,
+    letterSpacing: 0.8,
+    width: '100%',
+    marginBottom: 42,
   },
   buttonContainer: {
     width: '100%',
-    gap: 26,
-  },
-  button: {
-    backgroundColor: '#EEE4C5',
-    paddingVertical: 20,
-    borderRadius: 20,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  buttonText: {
-    fontSize: 17,
-    fontWeight: '400',
-    color: '#111111',
-    letterSpacing: 0.3,
   },
 });

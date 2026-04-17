@@ -1,13 +1,24 @@
 import { createContext, useContext, useMemo, useState } from 'react';
 
-import { profile } from '../data/mockData';
+
 
 const AppContext = createContext(null);
 
 export default function AppProvider({ children }) {
   const [selectedMode, setSelectedMode] = useState('roommate');
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [profileDraft, setProfileDraft] = useState(profile);
+  const [profileDraft, setProfileDraft] = useState({
+  name: '',
+  gender: '',
+  dateOfBirth: '',
+  role: '',
+  accommodationType: '',
+  roomType: '',
+  location: '',
+  price: '',
+  bio: '',
+  photos: [],
+});
 
   const value = useMemo(
     () => ({

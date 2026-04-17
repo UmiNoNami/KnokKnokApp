@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "705944821945",
+    "project_id": "knokknok-ea86d",
+    "storage_bucket": "knokknok-ea86d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:705944821945:android:c06bce4be41fdb47e87b68",
+        "android_client_info": {
+          "package_name": "Knok.knok.App"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDGjYT59BgtcgVX0_vmztd6pvHmwkNN40o"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

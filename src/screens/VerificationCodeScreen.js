@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -10,8 +11,35 @@ import {
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 
-export default function AuthScreen() {
-  const [email, setEmail] = useState('');
+export default function VerificationCodeScreen({ navigation, route }) {
+  const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const phoneNumber = route.params?.phoneNumber || '';
+
+  const handleVerifyCode = async () => {
+    const trimmedCode = code.trim();
+
+    if (!trimmedCode) {
+      Alert.alert('Missing code', 'Please enter the verification code.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      if (trimmedCode === '123456') {
+        navigation.navigate('UserDetails');
+      } else {
+        Alert.alert('Invalid code', 'Please enter the correct verification code.');
+      }
+    } catch (error) {
+      console.log('Verify code error:', error);
+      Alert.alert('Verification failed', 'Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AppScreen>
@@ -21,27 +49,28 @@ export default function AuthScreen() {
       >
         <View style={styles.container}>
           <View>
-            <Text style={styles.title}>What’s your email address?</Text>
+            <Text style={styles.title}>Enter verification code</Text>
 
             <Text style={styles.description}>
-              Use this email for account access and important notifications.
-              It will remain private.
+              We sent a code to {phoneNumber || 'your phone number'}.
             </Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Email address"
+              placeholder="Enter 6-digit code"
               placeholderTextColor="#9E9E9E"
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              value={email}
-              onChangeText={setEmail}
+              keyboardType="number-pad"
+              value={code}
+              onChangeText={setCode}
+              maxLength={6}
             />
           </View>
 
           <View style={styles.buttonWrapper}>
-            <CustomButton title="Next" onPress={() => {}} />
+            <CustomButton
+              title={loading ? 'Verifying...' : 'Verify'}
+              onPress={handleVerifyCode}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -71,8 +100,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2F2F2F',
     lineHeight: 24,
-    maxWidth: 320,
-    marginBottom: 72,
+    marginBottom: 36,
   },
   input: {
     width: '100%',
@@ -84,6 +112,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#111',
+    letterSpacing: 4,
   },
   buttonWrapper: {
     width: '100%',

@@ -1,130 +1,71 @@
-import { StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { View, Text, StyleSheet, ScrollView, Image } from 'react-native';
 
-import { colors } from '../theme/colors';
-
-export default function SwipeCard({ profile }) {
+export default function SwipeCard({ item }) {
   return (
     <View style={styles.card}>
-      <View style={styles.hero}>
-        <View style={styles.matchPill}>
-          <Text style={styles.matchText}>{profile.match} match</Text>
-        </View>
-        <View style={styles.heroSpacer} />
-        <Text style={styles.heroName}>
-          {profile.name}, {profile.age}
+      
+      {/* IMAGE CAROUSEL */}
+      <ScrollView horizontal pagingEnabled>
+        {item.photos?.map((photo, index) => (
+          <Image
+            key={index}
+            source={{ uri: photo }}
+            style={styles.image}
+          />
+        ))}
+      </ScrollView>
+
+      {/* INFO */}
+      <View style={styles.info}>
+        <Text style={styles.title}>
+          {item.accommodationType?.join(', ')} • {item.roomType?.join(', ')}
         </Text>
-        <Text style={styles.heroRole}>{profile.role}</Text>
-      </View>
 
-      <View style={styles.body}>
-        <View style={styles.row}>
-          <InfoTile label="Area" value={profile.area} />
-          <InfoTile label="Budget" value={profile.budget} />
-        </View>
-        <Text style={styles.bio}>{profile.bio}</Text>
-        <View style={styles.highlightRow}>
-          {profile.highlights.map((item) => (
-            <View key={item} style={styles.highlightPill}>
-              <Text style={styles.highlightText}>{item}</Text>
-            </View>
-          ))}
-        </View>
-      </View>
-    </View>
-  );
-}
+        <Text style={styles.location}>{item.location}</Text>
 
-function InfoTile({ label, value }) {
-  return (
-    <View style={styles.infoTile}>
-      <Text style={styles.infoLabel}>{label}</Text>
-      <Text style={styles.infoValue}>{value}</Text>
+        <Text style={styles.price}>€{item.price}</Text>
+
+        <Text style={styles.name}>{item.name}</Text>
+
+        <Text style={styles.bio}>{item.bio}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 28,
+    flex: 1,
+    borderRadius: 20,
     overflow: 'hidden',
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
+    backgroundColor: '#fff',
   },
-  hero: {
-    minHeight: 280,
-    padding: 22,
-    justifyContent: 'space-between',
-    backgroundColor: '#C88A5A',
+  image: {
+    width: 300,
+    height: 300,
+    marginRight: 10,
   },
-  matchPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255, 248, 241, 0.9)',
+  info: {
+    padding: 16,
   },
-  matchText: {
+  title: {
+    fontSize: 20,
     fontWeight: '700',
-    color: colors.primary,
   },
-  heroSpacer: {
-    flex: 1,
+  location: {
+    marginTop: 6,
+    color: '#666',
   },
-  heroName: {
-    color: '#FFF8F1',
-    fontSize: 30,
-    fontWeight: '800',
-    marginBottom: 4,
+  price: {
+    marginTop: 6,
+    fontWeight: '600',
   },
-  heroRole: {
-    color: '#FFF0E5',
-    fontSize: 15,
-  },
-  body: {
-    padding: 20,
-    gap: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  infoTile: {
-    flex: 1,
-    backgroundColor: '#FFFDFC',
-    borderRadius: 18,
-    padding: 14,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  infoLabel: {
-    fontSize: 12,
-    color: colors.mutedText,
-    marginBottom: 4,
-  },
-  infoValue: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.text,
+  name: {
+    marginTop: 8,
   },
   bio: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: colors.text,
-  },
-  highlightRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  highlightPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 9,
-    borderRadius: 999,
-    backgroundColor: colors.secondarySoft,
-  },
-  highlightText: {
-    color: colors.secondary,
-    fontWeight: '700',
+    marginTop: 8,
+    color: '#444',
   },
 });

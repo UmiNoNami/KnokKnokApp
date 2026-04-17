@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -10,8 +11,42 @@ import {
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 
-export default function AuthScreen() {
-  const [email, setEmail] = useState('');
+export default function PhoneNumberScreen({ navigation }) {
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSendCode = async () => {
+    const trimmed = phoneNumber.trim();
+
+    if (!trimmed) {
+      Alert.alert('Missing number', 'Please enter your phone number.');
+      return;
+    }
+
+    if (!trimmed.startsWith('+')) {
+      Alert.alert(
+        'Invalid format',
+        'Use international format like +353871234567.'
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      navigation.navigate('VerificationCode', {
+        phoneNumber: trimmed,
+      });
+    } catch (error) {
+      console.log('Send code error:', error);
+      Alert.alert(
+        'Could not send code',
+        'Check the number format and try again.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <AppScreen>
@@ -21,27 +56,32 @@ export default function AuthScreen() {
       >
         <View style={styles.container}>
           <View>
-            <Text style={styles.title}>What’s your email address?</Text>
+            <Text style={styles.title}>What’s your mobile number?</Text>
 
             <Text style={styles.description}>
-              Use this email for account access and important notifications.
-              It will remain private.
+              Enter the mobile number on which you can be contacted. No one
+              will see this on your profile.
             </Text>
+
+            <Text style={styles.countryLabel}>Ireland (+353)</Text>
 
             <TextInput
               style={styles.input}
-              placeholder="Email address"
+              placeholder="Mobile number"
               placeholderTextColor="#9E9E9E"
-              keyboardType="email-address"
+              keyboardType="phone-pad"
               autoCapitalize="none"
               autoCorrect={false}
-              value={email}
-              onChangeText={setEmail}
+              value={phoneNumber}
+              onChangeText={setPhoneNumber}
             />
           </View>
 
           <View style={styles.buttonWrapper}>
-            <CustomButton title="Next" onPress={() => {}} />
+            <CustomButton
+              title={loading ? 'Sending...' : 'Next'}
+              onPress={handleSendCode}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -72,7 +112,13 @@ const styles = StyleSheet.create({
     color: '#2F2F2F',
     lineHeight: 24,
     maxWidth: 320,
-    marginBottom: 72,
+    marginBottom: 36,
+  },
+  countryLabel: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#2A2A2A',
+    marginBottom: 18,
   },
   input: {
     width: '100%',

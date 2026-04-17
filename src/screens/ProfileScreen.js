@@ -6,7 +6,7 @@ import { useAppState } from '../providers/AppProvider';
 import { colors } from '../theme/colors';
 
 export default function ProfileScreen({ navigation }) {
-  const { profileDraft, signOut } = useAppState();
+  const { profileDraft, signOut } = useApp();
 
   return (
     <AppScreen>
