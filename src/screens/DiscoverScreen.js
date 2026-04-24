@@ -1,201 +1,233 @@
-import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useState } from 'react';
+import {
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { mapListings } from '../data/mockData';
 
-import AppScreen from '../components/AppScreen';
-import ScreenHeader from '../components/ScreenHeader';
-import { peopleMatches, properties } from '../data/mockData';
-import { useAppState } from '../providers/AppProvider';
-import { colors } from '../theme/colors';
+export default function DiscoverScreen() {
+  const [searchText, setSearchText] = useState('');
+  const [selectedArea, setSelectedArea] = useState('Smithfield');
+  const [maxBudget, setMaxBudget] = useState(300);
 
-export default function DiscoverScreen({ navigation }) {
-  const { selectedMode } = useApp();
-  const [mode, setMode] = useState(selectedMode === 'property' ? 'houses' : 'people');
+  const filteredListings = useMemo(() => {
+    return mapListings.filter((listing) => {
+      const areaMatches =
+        !selectedArea ||
+        listing.area.toLowerCase() === selectedArea.toLowerCase();
+
+      const budgetMatches = listing.price <= maxBudget;
+
+      return areaMatches && budgetMatches;
+    });
+  }, [selectedArea, maxBudget]);
+
+  const handleSearch = () => {
+    const query = searchText.trim();
+    if (!query) return;
+    setSelectedArea(query);
+  };
 
   return (
-    <AppScreen>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="Discover"
-          title="Search by house or by person"
-          subtitle="Use area, price, and compatibility to switch between available homes and potential roommates."
-          onPressAction={() => navigation.navigate('Settings')}
-        />
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        {/* Fake map */}
+        <View style={styles.fakeMap}>
+          <View style={styles.roadOne} />
+          <View style={styles.roadTwo} />
+          <View style={styles.roadThree} />
 
-        <View style={styles.toggleRow}>
-          <ToggleButton label="Houses" active={mode === 'houses'} onPress={() => setMode('houses')} />
-          <ToggleButton label="People" active={mode === 'people'} onPress={() => setMode('people')} />
+          {filteredListings.map((listing, index) => (
+            <View
+              key={listing.id}
+              style={[
+                styles.priceMarker,
+                markerPositions[index % markerPositions.length],
+              ]}
+            >
+              <Text style={styles.priceText}>€{listing.price}</Text>
+            </View>
+          ))}
         </View>
 
-        {mode === 'houses' ? (
-          <>
-            <View style={styles.mapCard}>
-              <Text style={styles.mapTitle}>Desired area map</Text>
-              <Text style={styles.mapBody}>
-                Later, this can connect to a real map. For now it highlights that users can browse homes by location
-                and compare prices visually.
-              </Text>
-              <View style={styles.mapPins}>
-                <MapPin area="Phibsborough" price="EUR2,700" left="16%" top="54%" />
-                <MapPin area="Smithfield" price="EUR2,400" left="48%" top="40%" />
-                <MapPin area="Docklands" price="EUR2,950" left="68%" top="62%" />
-              </View>
-            </View>
+        {/* Search */}
+        <View style={styles.searchBox}>
+          <TextInput
+            style={styles.input}
+            placeholder="Search area"
+            value={searchText}
+            onChangeText={setSearchText}
+            onSubmitEditing={handleSearch}
+          />
+          <Pressable style={styles.button} onPress={handleSearch}>
+            <Text style={styles.buttonText}>Search</Text>
+          </Pressable>
+        </View>
 
-            {properties.map((property) => (
-              <View key={property.id} style={styles.resultCard}>
-                <Text style={styles.resultTitle}>{property.title}</Text>
-                <Text style={styles.resultMeta}>
-                  {property.area} • {property.price}
-                </Text>
-                <Text style={styles.resultBody}>{property.note}</Text>
-              </View>
+        {/* Bottom card */}
+        <View style={styles.bottomCard}>
+          <Text style={styles.title}>
+            Available in {selectedArea || 'all areas'}
+          </Text>
+
+          <Text style={styles.subtitle}>
+            Under €{maxBudget}
+          </Text>
+
+          <View style={styles.budgetRow}>
+            {[250, 300, 400].map((b) => (
+              <Pressable
+                key={b}
+                style={[
+                  styles.budgetBtn,
+                  maxBudget === b && styles.activeBudget,
+                ]}
+                onPress={() => setMaxBudget(b)}
+              >
+                <Text style={styles.budgetText}>€{b}</Text>
+              </Pressable>
             ))}
-          </>
-        ) : (
-          peopleMatches.map((person) => (
-            <View key={person.id} style={styles.resultCard}>
-              <View style={styles.personRow}>
-                <Text style={styles.resultTitle}>{person.name}</Text>
-                <View style={styles.compatibilityPill}>
-                  <Text style={styles.compatibilityText}>{person.compatibility}</Text>
-                </View>
-              </View>
-              <Text style={styles.resultBody}>{person.summary}</Text>
-            </View>
-          ))
-        )}
-      </ScrollView>
-    </AppScreen>
+          </View>
+
+          <Text style={styles.result}>
+            {filteredListings.length} results
+          </Text>
+        </View>
+      </View>
+    </SafeAreaView>
   );
 }
 
-function ToggleButton({ label, active, onPress }) {
-  return (
-    <Pressable onPress={onPress} style={[styles.toggleButton, active && styles.toggleButtonActive]}>
-      <Text style={[styles.toggleLabel, active && styles.toggleLabelActive]}>{label}</Text>
-    </Pressable>
-  );
-}
-
-function MapPin({ area, price, left, top }) {
-  return (
-    <View style={[styles.mapPin, { left, top }]}>
-      <Text style={styles.mapPinPrice}>{price}</Text>
-      <Text style={styles.mapPinArea}>{area}</Text>
-    </View>
-  );
-}
+const markerPositions = [
+  { top: '30%', left: '20%' },
+  { top: '45%', left: '60%' },
+  { top: '60%', left: '35%' },
+  { top: '50%', left: '75%' },
+];
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#F4F4F1',
+  },
   container: {
-    padding: 20,
-    paddingBottom: 28,
-    gap: 16,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 4,
-  },
-  toggleButton: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 18,
-    alignItems: 'center',
-    backgroundColor: '#FFF5E9',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  toggleButtonActive: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  toggleLabel: {
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  toggleLabelActive: {
-    color: '#FFF8F1',
-  },
-  mapCard: {
-    minHeight: 260,
-    backgroundColor: colors.map,
-    borderRadius: 24,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#C9DED8',
-    overflow: 'hidden',
-  },
-  mapTitle: {
-    fontSize: 19,
-    fontWeight: '800',
-    color: colors.text,
-    marginBottom: 6,
-  },
-  mapBody: {
-    maxWidth: '72%',
-    fontSize: 14,
-    lineHeight: 20,
-    color: colors.mutedText,
-  },
-  mapPins: {
     flex: 1,
   },
-  mapPin: {
+
+  fakeMap: {
+    flex: 1,
+    backgroundColor: '#D8D5CC',
+  },
+
+  roadOne: {
     position: 'absolute',
+    width: '150%',
+    height: 50,
+    backgroundColor: '#EEECE5',
+    top: '30%',
+    left: '-20%',
+    transform: [{ rotate: '-20deg' }],
+  },
+
+  roadTwo: {
+    position: 'absolute',
+    width: '120%',
+    height: 40,
+    backgroundColor: '#F2F0EA',
+    top: '60%',
+    left: '-10%',
+    transform: [{ rotate: '20deg' }],
+  },
+
+  roadThree: {
+    position: 'absolute',
+    width: 40,
+    height: '120%',
+    backgroundColor: '#EAE7DF',
+    left: '50%',
+  },
+
+  priceMarker: {
+    position: 'absolute',
+    backgroundColor: '#F4C21A',
     paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderRadius: 16,
-    backgroundColor: '#FFFDF8',
-    borderWidth: 1,
-    borderColor: colors.border,
+    paddingVertical: 6,
+    borderRadius: 999,
   },
-  mapPinPrice: {
-    fontWeight: '800',
-    color: colors.primary,
-  },
-  mapPinArea: {
-    fontSize: 12,
-    color: colors.mutedText,
-  },
-  resultCard: {
-    padding: 18,
-    borderRadius: 22,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  resultTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
-  },
-  resultMeta: {
-    marginTop: 5,
-    marginBottom: 8,
-    color: colors.primary,
+
+  priceText: {
     fontWeight: '700',
   },
-  resultBody: {
-    fontSize: 14,
-    lineHeight: 21,
-    color: colors.mutedText,
-  },
-  personRow: {
+
+  searchBox: {
+    position: 'absolute',
+    top: 20,
+    left: 16,
+    right: 16,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    backgroundColor: '#fff',
+    padding: 10,
+    borderRadius: 16,
+  },
+
+  input: {
+    flex: 1,
+  },
+
+  button: {
+    backgroundColor: '#F4C21A',
+    paddingHorizontal: 12,
+    justifyContent: 'center',
+    borderRadius: 10,
+  },
+
+  buttonText: {
+    fontWeight: '700',
+  },
+
+  bottomCard: {
+    position: 'absolute',
+    bottom: 20,
+    left: 16,
+    right: 16,
+    backgroundColor: '#fff',
+    padding: 16,
+    borderRadius: 20,
+  },
+
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  subtitle: {
     marginBottom: 10,
   },
-  compatibilityPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 999,
-    backgroundColor: colors.successSoft,
+
+  budgetRow: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  compatibilityText: {
-    color: colors.success,
-    fontWeight: '800',
+
+  budgetBtn: {
+    padding: 10,
+    backgroundColor: '#eee',
+    borderRadius: 10,
+  },
+
+  activeBudget: {
+    backgroundColor: '#F4C21A',
+  },
+
+  budgetText: {
+    fontWeight: '600',
+  },
+
+  result: {
+    marginTop: 10,
   },
 });

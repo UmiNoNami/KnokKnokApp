@@ -7,15 +7,7 @@ import CustomButton from '../components/CustomButton';
 export default function LookingForScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState(null);
   const { updateProfile } = useAppState();
-  const handleNext = () => {
-    if (!selectedOption) return;
-
-    if (selectedOption === 'accommodation') {
-      navigation.navigate('AccommodationType');
-    } else if (selectedOption === 'tenant') {
-      navigation.navigate('Lifestyle');
-    }
-  };
+  
 
   const OptionCard = ({ title, value }) => {
     const selected = selectedOption === value;
@@ -69,7 +61,8 @@ export default function LookingForScreen({ navigation }) {
         </View>
 
         <View style={styles.buttonWrapper}>
-              <CustomButton
+ 
+ <CustomButton
   title="Next"
   onPress={() => {
     if (!selectedOption) return;
@@ -81,11 +74,7 @@ export default function LookingForScreen({ navigation }) {
 
     updateProfile({ role });
 
-    if (selectedOption === 'accommodation') {
-      navigation.navigate('AccommodationType');
-    } else {
-      navigation.navigate('Lifestyle');
-    }
+    navigation.navigate('Lifestyle');
   }}
   style={!selectedOption && styles.disabledButton}
   textStyle={!selectedOption && styles.disabledButtonText}

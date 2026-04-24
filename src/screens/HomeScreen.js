@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import {
   Image,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,142 +9,94 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAppState } from '../providers/AppProvider';
+import { houseProfiles, peopleProfiles } from '../data/mockData';
 
 const { width } = Dimensions.get('window');
-const CARD_WIDTH = width - 24;
+const CARD_WIDTH = width - 30;
 
 export default function HomeScreen() {
   const { profileDraft } = useAppState();
   const [currentIndex, setCurrentIndex] = useState(0);
 
-  const photos = profileDraft.photos || [];
+  const isAccommodationSeeker = profileDraft.role === 'accommodation';
 
-  const accommodationText = profileDraft.accommodationType?.length
-    ? profileDraft.accommodationType.join(', ')
-    : 'Accommodation';
+  const feedData = useMemo(() => {
+    return isAccommodationSeeker ? houseProfiles : peopleProfiles;
+  }, [isAccommodationSeeker]);
 
-  const roomText = profileDraft.roomType?.length
-    ? profileDraft.roomType.join(', ')
-    : 'Room type';
+  useEffect(() => {
+    setCurrentIndex(0);
+  }, [isAccommodationSeeker]);
 
-  const locationText = profileDraft.location || 'Location not added';
-  const priceText = profileDraft.price
-    ? `€${profileDraft.price} / month`
-    : 'Price not added';
+  const currentItem = feedData[currentIndex];
+
+  if (!currentItem) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>
+            No more cards, you have reached the end of the current feed.
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  const goNextCard = () => {
+    setCurrentIndex((prev) => prev + 1);
+  };
+
+  const headerIcon = isAccommodationSeeker
+    ? require('../../assets/icons/house.png')
+    : require('../../assets/icons/profile.png');
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        <View style={styles.topBar}>
-          <Pressable style={styles.searchButton}>
-            <Text style={styles.searchText}>Search</Text>
+        <View style={styles.header}>
+          <Pressable style={styles.smallIconButton}>
+            <Image source={headerIcon} style={styles.smallIcon} />
+          </Pressable>
+
+          <Text style={styles.headerTitle}>For you</Text>
+
+          <Pressable style={styles.refreshButton} onPress={() => setCurrentIndex(0)}>
+            <Image
+              source={require('../../assets/icons/refresh.png')}
+              style={styles.refreshIcon}
+            />
           </Pressable>
         </View>
 
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-        >
-          <View style={styles.imageWrapper}>
-            {photos.length > 0 ? (
-              <>
-                <ScrollView
-                  horizontal
-                  pagingEnabled
-                  showsHorizontalScrollIndicator={false}
-                  onMomentumScrollEnd={(event) => {
-                    const slideWidth = event.nativeEvent.layoutMeasurement.width;
-                    const index = Math.round(
-                      event.nativeEvent.contentOffset.x / slideWidth
-                    );
-                    setCurrentIndex(index);
-                  }}
-                >
-                  {photos.map((photo, index) => (
-                    <Image
-                      key={index}
-                      source={{ uri: photo }}
-                      style={styles.roomImage}
-                    />
-                  ))}
-                </ScrollView>
+        <View style={styles.outerCard}>
+          <View style={styles.card}>
+            <Image source={currentItem.image} style={styles.roomImage} />
 
-                <View style={styles.dotsWrapper}>
-                  {photos.map((_, index) => (
-                    <View
-                      key={index}
-                      style={[
-                        styles.dot,
-                        currentIndex === index && styles.activeDot,
-                      ]}
-                    />
-                  ))}
-                </View>
-              </>
-            ) : (
-              <View style={styles.placeholderImage}>
-                <Text style={styles.placeholderText}>No photos uploaded yet</Text>
-              </View>
-            )}
-          </View>
-
-          <View style={styles.infoSection}>
-            <View style={styles.headerRow}>
-              <View style={styles.titleBlock}>
-                <Text style={styles.title}>{accommodationText}</Text>
-                <Text style={styles.subtitle}>
-                  {roomText} • {locationText}
-                </Text>
-              </View>
-
-              <View style={styles.priceBadge}>
-                <Text style={styles.priceText}>{priceText}</Text>
-              </View>
+            <View style={styles.imageTextOverlay}>
+              <Text style={styles.cardTitle}>{currentItem.title}</Text>
+              <Text style={styles.cardLocation}>{currentItem.location}</Text>
             </View>
-
-            <View style={styles.chipsRow}>
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{accommodationText}</Text>
-              </View>
-
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{roomText}</Text>
-              </View>
-
-              <View style={styles.chip}>
-                <Text style={styles.chipText}>{locationText}</Text>
-              </View>
-            </View>
-
-            <View style={styles.hostBox}>
-              <Text style={styles.hostLabel}>Posted by</Text>
-              <Text style={styles.hostName}>{profileDraft.name || 'No name yet'}</Text>
-            </View>
-
-            {!!profileDraft.bio && (
-              <View style={styles.bioBox}>
-                <Text style={styles.bioTitle}>About this place</Text>
-                <Text style={styles.bioText}>{profileDraft.bio}</Text>
-              </View>
-            )}
           </View>
 
           <View style={styles.actionRow}>
-            <Pressable style={styles.iconButton}>
+            <Pressable style={styles.actionButton} onPress={goNextCard}>
               <Image
                 source={require('../../assets/icons/close.png')}
                 style={styles.actionIcon}
               />
             </Pressable>
 
-            <Pressable style={[styles.iconButton, styles.likeButton]}>
+            <Pressable
+              style={[styles.actionButton, styles.likeButton]}
+              onPress={goNextCard}
+            >
               <Image
                 source={require('../../assets/icons/like.png')}
                 style={styles.actionIcon}
               />
             </Pressable>
           </View>
-        </ScrollView>
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -154,187 +105,134 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F4F4F4',
+    backgroundColor: '#F4F4F1',
   },
   container: {
     flex: 1,
-    backgroundColor: '#F4F4F4',
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
+    paddingTop: 6,
+    backgroundColor: '#F4F4F1',
   },
-  topBar: {
-    alignItems: 'flex-end',
-    marginTop: 8,
-    marginBottom: 12,
-    paddingRight: 6,
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 4,
+    marginBottom: 18,
+    paddingHorizontal: 4,
   },
-  searchButton: {
-    minHeight: 38,
-    paddingHorizontal: 18,
-    borderWidth: 1.4,
-    borderColor: '#111',
-    borderRadius: 14,
+  headerTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111',
+  },
+  smallIconButton: {
+    width: 34,
+    height: 34,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  smallIcon: {
+    width: 20,
+    height: 20,
+    resizeMode: 'contain',
+  },
+  refreshButton: {
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    backgroundColor: '#F8F8F6',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F4F4F4',
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 3,
   },
-  searchText: {
-    fontSize: 17,
-    color: '#111',
-    fontWeight: '500',
+  refreshIcon: {
+    width: 24,
+    height: 24,
+    resizeMode: 'contain',
   },
-  scrollContent: {
-    paddingBottom: 28,
+  outerCard: {
+    backgroundColor: '#F4F4F1',
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: '#DDD8D1',
+    padding: 10,
+    shadowColor: '#000',
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  imageWrapper: {
-    position: 'relative',
+  card: {
+    borderRadius: 22,
+    overflow: 'hidden',
+    backgroundColor: '#fff',
   },
   roomImage: {
-    width: CARD_WIDTH,
-    height: 360,
-    borderRadius: 24,
-    marginRight: 12,
+    width: CARD_WIDTH - 20,
+    height: 410,
+    resizeMode: 'cover',
   },
-  placeholderImage: {
-    width: CARD_WIDTH,
-    height: 360,
-    borderRadius: 24,
-    backgroundColor: '#E3E1DE',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  placeholderText: {
-    color: '#666',
-    fontSize: 16,
-  },
-  dotsWrapper: {
+  imageTextOverlay: {
     position: 'absolute',
-    bottom: 14,
-    left: 0,
-    right: 0,
-    flexDirection: 'row',
-    justifyContent: 'center',
+    left: 18,
+    bottom: 20,
   },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.55)',
-    marginHorizontal: 4,
-  },
-  activeDot: {
-    backgroundColor: '#FFFFFF',
-    width: 18,
-  },
-  infoSection: {
-    marginTop: 18,
-    paddingHorizontal: 6,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  titleBlock: {
-    flex: 1,
-    paddingRight: 8,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: '#111',
-  },
-  subtitle: {
-    marginTop: 6,
-    fontSize: 16,
-    color: '#4F4B45',
-    lineHeight: 22,
-  },
-  priceBadge: {
-    backgroundColor: '#F3E7B7',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    alignSelf: 'flex-start',
-  },
-  priceText: {
-    fontSize: 15,
-    color: '#111',
-    fontWeight: '700',
-  },
-  chipsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginTop: 18,
-  },
-  chip: {
-    backgroundColor: '#F3E7B7',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-  },
-  chipText: {
-    fontSize: 14,
-    color: '#111',
-    fontWeight: '500',
-  },
-  hostBox: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 8,
-  },
-  hostLabel: {
-    fontSize: 14,
-    color: '#666',
-  },
-  hostName: {
+  cardTitle: {
     fontSize: 18,
-    color: '#111',
-    fontWeight: '700',
+    fontWeight: '400',
+    color: '#fff',
+    marginBottom: 6,
   },
-  bioBox: {
-    marginTop: 16,
-    backgroundColor: '#ECEAE7',
-    borderRadius: 18,
-    padding: 14,
-  },
-  bioTitle: {
+  cardLocation: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#111',
-    marginBottom: 8,
-  },
-  bioText: {
-    fontSize: 15,
-    color: '#2F2F2F',
-    lineHeight: 22,
+    fontWeight: '400',
+    color: '#fff',
   },
   actionRow: {
-    marginTop: 24,
-    marginBottom: 10,
-    paddingHorizontal: 42,
+    marginTop: 12,
+    marginBottom: 4,
+    paddingHorizontal: 40,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  iconButton: {
-    width: 82,
-    height: 82,
-    borderRadius: 26,
-    borderWidth: 2,
-    borderColor: '#111',
-    backgroundColor: '#F8F6F2',
+  actionButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#F8F8F6',
+    borderWidth: 1.5,
+    borderColor: '#DDD8D1',
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 2,
   },
-  likeButton: {
-    backgroundColor: '#FFF8F1',
-  },
+  likeButton: {},
   actionIcon: {
-    width: 36,
-    height: 36,
+    width: 28,
+    height: 28,
     resizeMode: 'contain',
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+    backgroundColor: '#F4F4F1',
+  },
+  emptyText: {
+    fontSize: 18,
+    color: '#333',
+    textAlign: 'center',
+    lineHeight: 26,
   },
 });

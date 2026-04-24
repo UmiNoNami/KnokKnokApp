@@ -1,152 +1,166 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
+import React from 'react';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppScreen from '../components/AppScreen';
-import ScreenHeader from '../components/ScreenHeader';
 import { useAppState } from '../providers/AppProvider';
-import { colors } from '../theme/colors';
 
-export default function ProfileScreen({ navigation }) {
-  const { profileDraft, signOut } = useApp();
+export default function ProfileScreen() {
+  const { profileDraft } = useAppState();
+
+  const firstPhoto = profileDraft.photos?.[0];
+  const isAccommodationSeeker = profileDraft.role === 'accommodation';
+
+  const accommodationText = profileDraft.accommodationType?.length
+    ? profileDraft.accommodationType.join(', ')
+    : 'Accommodation not selected';
+
+  const roomText = profileDraft.roomType?.length
+    ? profileDraft.roomType.join(', ')
+    : 'Room type not selected';
 
   return (
     <AppScreen>
-      <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="Profile"
-          title={profileDraft.name}
-          subtitle="This is where users can update their housing preferences, budget, lifestyle, and move-in timing."
-          onPressAction={() => navigation.navigate('Settings')}
-        />
+      <ScrollView
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}
+      >
+        <Text style={styles.title}>
+          {isAccommodationSeeker ? 'My profile' : 'House profile'}
+        </Text>
 
-        <View style={styles.heroCard}>
-          <Text style={styles.tagline}>{profileDraft.tagline}</Text>
-          <View style={styles.statsRow}>
-            <Stat label="Location" value={profileDraft.location} />
-            <Stat label="Budget" value={profileDraft.budget} />
-            <Stat label="Move-in" value={profileDraft.moveIn} />
+        {firstPhoto ? (
+          <Image source={{ uri: firstPhoto }} style={styles.image} />
+        ) : (
+          <View style={styles.placeholder}>
+            <Text style={styles.placeholderText}>No photo yet</Text>
           </View>
-        </View>
+        )}
 
-        <View style={styles.sectionCard}>
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Preferences</Text>
-            <Pressable style={styles.editButton} onPress={() => navigation.navigate('EditProfile')}>
-              <Text style={styles.editLabel}>Edit profile</Text>
-            </Pressable>
-          </View>
+        {isAccommodationSeeker ? (
+          <>
+            <Text style={styles.name}>
+              {profileDraft.name || 'No name added'}
+            </Text>
 
-          {profileDraft.preferences.map((item) => (
-            <View key={item} style={styles.preferencePill}>
-              <Text style={styles.preferenceText}>{item}</Text>
+            <Text style={styles.location}>
+              {profileDraft.location || 'Preferred location not added'}
+            </Text>
+
+            <Text style={styles.info}>
+              Looking for: {accommodationText}
+            </Text>
+
+            <Text style={styles.info}>
+              Preferred room: {roomText}
+            </Text>
+
+            <Text style={styles.info}>
+              Budget: {profileDraft.price ? `€${profileDraft.price}` : 'Not added'}
+            </Text>
+
+            <Text style={styles.sectionTitle}>About me</Text>
+            <View style={styles.box}>
+              <Text style={styles.body}>
+                {profileDraft.bio || 'No bio added yet.'}
+              </Text>
             </View>
-          ))}
-        </View>
+          </>
+        ) : (
+          <>
+            <Text style={styles.name}>{accommodationText}</Text>
 
-        <Pressable style={styles.signOutButton} onPress={signOut}>
-          <Text style={styles.signOutLabel}>Sign out</Text>
-        </Pressable>
+            <Text style={styles.location}>
+              {profileDraft.location || 'Location not added'}
+            </Text>
+
+            <Text style={styles.info}>{roomText}</Text>
+
+            <Text style={styles.info}>
+              {profileDraft.price ? `€${profileDraft.price}` : 'Price not added'}
+            </Text>
+
+            <Text style={styles.sectionTitle}>Property description</Text>
+            <View style={styles.box}>
+              <Text style={styles.body}>
+                {profileDraft.bio || 'No property description added yet.'}
+              </Text>
+            </View>
+
+            <Text style={styles.sectionTitle}>Posted by</Text>
+            <View style={styles.box}>
+              <Text style={styles.body}>
+                {profileDraft.name || 'No name added'}
+              </Text>
+            </View>
+          </>
+        )}
       </ScrollView>
     </AppScreen>
-  );
-}
-
-function Stat({ label, value }) {
-  return (
-    <View style={styles.statTile}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={styles.statValue}>{value}</Text>
-    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     padding: 20,
-    paddingBottom: 28,
-    gap: 16,
+    paddingBottom: 40,
   },
-  heroCard: {
-    padding: 20,
-    borderRadius: 24,
-    backgroundColor: '#FFF5EC',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  tagline: {
-    fontSize: 19,
-    lineHeight: 27,
+  title: {
+    fontSize: 28,
     fontWeight: '700',
-    color: colors.text,
-    marginBottom: 18,
+    color: '#111',
+    marginBottom: 20,
   },
-  statsRow: {
-    gap: 12,
-  },
-  statTile: {
-    padding: 14,
-    borderRadius: 18,
-    backgroundColor: '#FFFDFC',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: colors.mutedText,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontWeight: '800',
-    color: colors.text,
-  },
-  sectionCard: {
-    padding: 18,
+  image: {
+    width: '100%',
+    height: 320,
     borderRadius: 24,
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-    gap: 10,
+    marginBottom: 20,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  placeholder: {
+    width: '100%',
+    height: 320,
+    borderRadius: 24,
+    backgroundColor: '#E8E4DD',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 4,
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  placeholderText: {
+    color: '#666',
+    fontSize: 16,
+  },
+  name: {
+    fontSize: 30,
+    fontWeight: '700',
+    color: '#222',
+    marginBottom: 8,
+  },
+  location: {
+    fontSize: 18,
+    color: '#444',
+    marginBottom: 8,
+  },
+  info: {
+    fontSize: 16,
+    color: '#555',
+    marginBottom: 6,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: colors.text,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111',
+    marginTop: 22,
+    marginBottom: 10,
   },
-  editButton: {
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 999,
-    backgroundColor: colors.primarySoft,
-  },
-  editLabel: {
-    color: colors.primary,
-    fontWeight: '800',
-  },
-  preferencePill: {
-    padding: 14,
-    borderRadius: 16,
-    backgroundColor: '#FFFDFC',
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  preferenceText: {
-    color: colors.text,
-    fontWeight: '600',
-  },
-  signOutButton: {
-    paddingVertical: 16,
+  box: {
+    backgroundColor: '#F7F5F1',
     borderRadius: 18,
-    alignItems: 'center',
-    backgroundColor: colors.dangerSoft,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#D8D3CB',
   },
-  signOutLabel: {
-    color: colors.danger,
-    fontWeight: '800',
+  body: {
+    fontSize: 16,
+    color: '#222',
+    lineHeight: 24,
   },
 });

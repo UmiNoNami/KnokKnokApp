@@ -1,6 +1,6 @@
 import React from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
-import { Image, StyleSheet, View } from 'react-native';
+import { Image, StyleSheet, Text, View } from 'react-native';
 
 import HomeScreen from '../screens/HomeScreen';
 import DiscoverScreen from '../screens/DiscoverScreen';
@@ -15,17 +15,22 @@ export default function AppTabs() {
       screenOptions={{
         headerShown: false,
         tabBarStyle: styles.tabBar,
-        tabBarShowLabel: false,
+        tabBarShowLabel: true,
+        tabBarLabelStyle: styles.tabBarLabel,
+        tabBarActiveTintColor: '#111111',
+        tabBarInactiveTintColor: '#6F6A63',
       }}
     >
       <Tab.Screen
         name="Home"
         component={HomeScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <TabIcon
               icon={require('../../assets/icons/home.png')}
               focused={focused}
+              color={color}
+              label="Home"
             />
           ),
         }}
@@ -35,10 +40,12 @@ export default function AppTabs() {
         name="Explore"
         component={DiscoverScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <TabIcon
               icon={require('../../assets/icons/explore.png')}
               focused={focused}
+              color={color}
+              label="Explore"
             />
           ),
         }}
@@ -48,10 +55,12 @@ export default function AppTabs() {
         name="Messages"
         component={MessagesScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <TabIcon
               icon={require('../../assets/icons/message.png')}
               focused={focused}
+              color={color}
+              label="Messages"
             />
           ),
         }}
@@ -61,10 +70,12 @@ export default function AppTabs() {
         name="Profile"
         component={ProfileScreen}
         options={{
-          tabBarIcon: ({ focused }) => (
+          tabBarIcon: ({ focused, color }) => (
             <TabIcon
               icon={require('../../assets/icons/profile.png')}
               focused={focused}
+              color={color}
+              label="Profile"
             />
           ),
         }}
@@ -73,35 +84,52 @@ export default function AppTabs() {
   );
 }
 
-function TabIcon({ icon, focused }) {
+function TabIcon({ icon, focused, color, label }) {
   return (
-    <View style={[styles.iconWrap, focused && styles.activeIcon]}>
-      <Image source={icon} style={styles.icon} />
+    <View style={styles.iconWrap}>
+      <View style={[styles.iconPill, focused && styles.activeIconPill]}>
+        <Image source={icon} style={[styles.icon, { tintColor: color }]} />
+        <Text style={[styles.iconLabel, { color }]}>{label}</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 80,
+    height: 86,
     borderTopWidth: 1,
     borderTopColor: '#D8D3CB',
     backgroundColor: '#F4F4F4',
     paddingTop: 8,
+    paddingBottom: 10,
+  },
+  tabBarLabel: {
+    display: 'none',
   },
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeIcon: {
-    backgroundColor: '#F4C21A',
+  iconPill: {
+    minWidth: 72,
     borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeIconPill: {
+    backgroundColor: '#F4C21A',
   },
   icon: {
-    width: 32,
-    height: 32,
+    width: 24,
+    height: 24,
     resizeMode: 'contain',
+    marginBottom: 2,
+  },
+  iconLabel: {
+    fontSize: 12,
+    fontWeight: '500',
   },
 });
