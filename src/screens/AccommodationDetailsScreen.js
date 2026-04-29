@@ -222,14 +222,22 @@ export default function AccommodationDetailsScreen({ navigation }) {
 
               <View style={styles.buttonWrapper}>
                      <CustomButton
-  title="Next"
-  onPress={() => {
-    updateProfile({
-      location,
-      price: priceRange,
-    });
+                      title="Next"
+                     onPress={() => {
+                      updateProfile({
+  tenants: tenantsCount,
+  bathroomCount,
+  bedroomCount,
+  livingRoom,
+  gardenBalcony,
+  wifi,
+  furnished,
+  billsIncluded: billIncluded,
+  price: priceRange,
+  location,
+});
 
-    navigation.navigate('CreateProfile');
+    navigation.navigate('Lifestyle');
   }}
 />
 

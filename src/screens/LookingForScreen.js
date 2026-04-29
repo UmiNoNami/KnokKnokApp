@@ -69,12 +69,13 @@ export default function LookingForScreen({ navigation }) {
 
     const role =
       selectedOption === 'accommodation'
-        ? 'accommodation'
-        : 'roommate';
+        ? 'seeker'
+        : 'provider';
 
     updateProfile({ role });
 
-    navigation.navigate('Lifestyle');
+    // SAME flow for both users
+    navigation.navigate('AccommodationType');
   }}
   style={!selectedOption && styles.disabledButton}
   textStyle={!selectedOption && styles.disabledButtonText}

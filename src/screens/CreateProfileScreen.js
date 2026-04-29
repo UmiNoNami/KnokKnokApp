@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { saveProfileToFirebase } from '../services/profileService';
 import {
   Alert,
   Image,
@@ -39,11 +40,11 @@ export default function CreateProfileScreen({ navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [4, 4],
-      quality: 1,
-    });
+  mediaTypes: ImagePicker.MediaTypeOptions.Images,
+  allowsEditing: true,
+  aspect: [4, 4],
+  quality: 1,
+});
 
     if (!result.canceled) {
       const selectedUri = result.assets[0].uri;
@@ -112,13 +113,17 @@ export default function CreateProfileScreen({ navigation }) {
           <View style={styles.buttonWrapper}>
                <CustomButton
   title="Finish"
-  onPress={() => {
-    updateProfile({
+  onPress={async () => {
+    const profileData = {
       bio,
       photos,
-    });
+    };
 
-    navigation.navigate('Main'); // go to home tabs
+    updateProfile(profileData);
+
+    await saveProfileToFirebase(profileData);
+
+    navigation.navigate('Main');
   }}
 />
           </View>

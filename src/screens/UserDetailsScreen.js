@@ -18,6 +18,7 @@ import CustomButton from '../components/CustomButton';
 export default function UserDetailsScreen({ navigation }) {
   const { updateProfile, profileDraft } = useAppState();
   const [name, setName] = useState(profileDraft.name || '');
+  const [job, setJob] = useState(profileDraft.job || '');
 
   const [dayOpen, setDayOpen] = useState(false);
   const [dayValue, setDayValue] = useState(null);
@@ -110,6 +111,14 @@ export default function UserDetailsScreen({ navigation }) {
                   value={name}
                   onChangeText={setName}
                 />
+                <Text style={styles.label}>What do you do?</Text>
+                <TextInput
+                 style={styles.input}
+                  placeholder="Example: Waitress, Student, Designer"
+                  placeholderTextColor="#A8A29E"
+                   value={job}
+                    onChangeText={setJob}
+                      />
 
                 <Text style={styles.label}>Date of Birth</Text>
                 <View style={styles.dateRow}>
@@ -205,10 +214,11 @@ export default function UserDetailsScreen({ navigation }) {
   title="Next"
   onPress={() => {
     updateProfile({
-      name,
-      gender: genderValue,
-      dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
-    });
+  name,
+  job,
+  gender: genderValue,
+  dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
+});
 
     navigation.navigate('LookingFor');
   }}

@@ -1,18 +1,28 @@
 import React, { useMemo, useState } from 'react';
 import {
+  Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { mapListings } from '../data/mockData';
+import { useNavigation } from '@react-navigation/native';
+
+import { useAppState } from '../providers/AppProvider';
+import { mapListings, peopleProfiles } from '../data/mockData';
 
 export default function DiscoverScreen() {
+  const navigation = useNavigation();
+  const { profileDraft } = useAppState();
+
   const [searchText, setSearchText] = useState('');
   const [selectedArea, setSelectedArea] = useState('Smithfield');
   const [maxBudget, setMaxBudget] = useState(300);
+
+  const isAccommodationSeeker = profileDraft.role === 'seeker';
 
   const filteredListings = useMemo(() => {
     return mapListings.filter((listing) => {
@@ -32,10 +42,51 @@ export default function DiscoverScreen() {
     setSelectedArea(query);
   };
 
+  if (!isAccommodationSeeker) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.interestedContainer}>
+          <View style={styles.interestedHeader}>
+          
+            <Text style={styles.interestedTitle}>Interested</Text>
+            <View style={{ width: 24 }} />
+          </View>
+
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.peopleGrid}
+          >
+            {peopleProfiles.map((person) => (
+              <Pressable
+                key={person.id}
+                style={styles.personCard}
+                onPress={() =>
+                  navigation.navigate('ListingDetails', {
+                    item: person,
+                  })
+                }
+              >
+                <Image source={person.image} style={styles.personImage} />
+
+                <View style={styles.personOverlay}>
+                  <View>
+                    <Text style={styles.personName}>{person.title}</Text>
+                    <Text style={styles.personInfo}>{person.location}</Text>
+                  </View>
+
+                  <Text style={styles.sendIcon}>⌁</Text>
+                </View>
+              </Pressable>
+            ))}
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
-        {/* Fake map */}
         <View style={styles.fakeMap}>
           <View style={styles.roadOne} />
           <View style={styles.roadTwo} />
@@ -54,7 +105,6 @@ export default function DiscoverScreen() {
           ))}
         </View>
 
-        {/* Search */}
         <View style={styles.searchBox}>
           <TextInput
             style={styles.input}
@@ -63,20 +113,18 @@ export default function DiscoverScreen() {
             onChangeText={setSearchText}
             onSubmitEditing={handleSearch}
           />
+
           <Pressable style={styles.button} onPress={handleSearch}>
             <Text style={styles.buttonText}>Search</Text>
           </Pressable>
         </View>
 
-        {/* Bottom card */}
         <View style={styles.bottomCard}>
           <Text style={styles.title}>
             Available in {selectedArea || 'all areas'}
           </Text>
 
-          <Text style={styles.subtitle}>
-            Under €{maxBudget}
-          </Text>
+          <Text style={styles.subtitle}>Under €{maxBudget}</Text>
 
           <View style={styles.budgetRow}>
             {[250, 300, 400].map((b) => (
@@ -93,9 +141,7 @@ export default function DiscoverScreen() {
             ))}
           </View>
 
-          <Text style={styles.result}>
-            {filteredListings.length} results
-          </Text>
+          <Text style={styles.result}>{filteredListings.length} results</Text>
         </View>
       </View>
     </SafeAreaView>
@@ -114,6 +160,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F4F4F1',
   },
+
   container: {
     flex: 1,
   },
@@ -229,5 +276,84 @@ const styles = StyleSheet.create({
 
   result: {
     marginTop: 10,
+  },
+
+  interestedContainer: {
+    flex: 1,
+    backgroundColor: '#F4F4F1',
+    paddingHorizontal: 8,
+    paddingTop: 18,
+  },
+
+  interestedHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginBottom: 28,
+  },
+
+  homeIcon: {
+    fontSize: 24,
+    color: '#222',
+  },
+
+  interestedTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: '#050505',
+  },
+
+  peopleGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    paddingBottom: 120,
+  },
+
+  personCard: {
+    width: '48%',
+    height: 206,
+    borderRadius: 14,
+    overflow: 'hidden',
+    backgroundColor: '#ddd',
+    marginBottom: 12,
+  },
+
+  personImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+
+  personOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 66,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.55)',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+
+  personName: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#222',
+  },
+
+  personInfo: {
+    fontSize: 14,
+    color: '#222',
+    marginTop: 2,
+  },
+
+  sendIcon: {
+    fontSize: 28,
+    color: '#222',
   },
 });

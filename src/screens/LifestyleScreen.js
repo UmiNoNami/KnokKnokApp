@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useAppState } from '../providers/AppProvider';
 import {
   ScrollView,
   StyleSheet,
@@ -11,6 +12,7 @@ import SelectableChip from '../components/SelectableChip';
 
 export default function LifestyleScreen({ navigation }) {
   const [selectedItems, setSelectedItems] = useState([]);
+  const { updateProfile } = useAppState();
 
   const toggleItem = (item) => {
     if (selectedItems.includes(item)) {
@@ -87,9 +89,15 @@ export default function LifestyleScreen({ navigation }) {
 
           <View style={styles.buttonWrapper}>
             <CustomButton
-              title="Next"
-              onPress={() => navigation.navigate('CreateProfile')}
-            />
+            title="Next"
+             onPress={() => {
+             updateProfile({
+             lifestyleTags: selectedItems,
+              });
+
+            navigation.navigate('CreateProfile');
+            }}
+/>
           </View>
         </View>
       </ScrollView>

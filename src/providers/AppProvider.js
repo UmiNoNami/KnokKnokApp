@@ -7,15 +7,19 @@ const AppContext = createContext(null);
 export default function AppProvider({ children }) {
   const [selectedMode, setSelectedMode] = useState('roommate');
   const [isSignedIn, setIsSignedIn] = useState(false);
-  const [profileDraft, setProfileDraft] = useState({
+const [profileDraft, setProfileDraft] = useState({
   name: '',
+  job: '',
   gender: '',
   dateOfBirth: '',
   role: '',
-  accommodationType: '',
-  roomType: '',
+  accommodationType: [],
+  roomType: [],
   location: '',
   price: '',
+  billsIncluded: true,
+  tenants: '',
+  lifestyleTags: [],
   bio: '',
   photos: [],
 });

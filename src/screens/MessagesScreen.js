@@ -1,39 +1,38 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-
+import React from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import AppScreen from '../components/AppScreen';
-import ScreenHeader from '../components/ScreenHeader';
-import { conversations } from '../data/mockData';
-import { colors } from '../theme/colors';
+import { conversations } from '../data/conversations';
 
 export default function MessagesScreen({ navigation }) {
   return (
-    <AppScreen>
+    <AppScreen padded={false}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
-        <ScreenHeader
-          eyebrow="Messages"
-          title="Keep matches moving"
-          subtitle="Direct messaging sits at the center of the experience so people can move from swiping to real conversations."
-          onPressAction={() => navigation.navigate('Settings')}
-        />
-
-        <View style={styles.quickActions}>
-          <Pressable style={styles.primaryAction}>
-            <Text style={styles.primaryActionLabel}>Start new chat</Text>
-          </Pressable>
-          <Pressable style={styles.secondaryAction}>
-            <Text style={styles.secondaryActionLabel}>Unread only</Text>
-          </Pressable>
+        <View style={styles.header}>
+          
+          <Text style={styles.title}>Message</Text>
+          <View style={styles.headerSpace} />
         </View>
 
-        {conversations.map((conversation) => (
-          <View key={conversation.id} style={styles.threadCard}>
-            <View style={styles.threadTopRow}>
-              <Text style={styles.threadName}>{conversation.name}</Text>
-              <Text style={styles.threadTime}>{conversation.time}</Text>
-            </View>
-            <Text style={styles.threadMessage}>{conversation.lastMessage}</Text>
-          </View>
-        ))}
+        <View style={styles.list}>
+          {conversations.map((item) => (
+            <Pressable
+              key={item.id}
+              style={styles.card}
+              onPress={() => navigation.navigate('Chat', { conversation: item })}
+            >
+              <Image source={{ uri: item.avatar }} style={styles.avatar} />
+
+              <View style={styles.textArea}>
+                <Text style={styles.name}>{item.name}</Text>
+                <View style={styles.previewBubble}>
+                  <Text style={styles.previewText} numberOfLines={1}>
+                    {item.preview}
+                  </Text>
+                </View>
+              </View>
+            </Pressable>
+          ))}
+        </View>
       </ScrollView>
     </AppScreen>
   );
@@ -41,61 +40,86 @@ export default function MessagesScreen({ navigation }) {
 
 const styles = StyleSheet.create({
   container: {
-    padding: 20,
-    paddingBottom: 28,
-    gap: 14,
+    flexGrow: 1,
+    backgroundColor: '#FAF8F4',
+    paddingHorizontal: 22,
+    paddingTop: 60,
+    paddingBottom: 130,
   },
-  quickActions: {
+
+  header: {
     flexDirection: 'row',
-    gap: 12,
-    marginBottom: 4,
-  },
-  primaryAction: {
-    flex: 1,
-    backgroundColor: colors.primary,
-    paddingVertical: 15,
-    borderRadius: 18,
     alignItems: 'center',
+    marginBottom: 90,
   },
-  primaryActionLabel: {
-    color: '#FFF8F1',
-    fontWeight: '800',
+
+  homeIcon: {
+    width: 45,
+    fontSize: 26,
+    color: '#222',
   },
-  secondaryAction: {
-    paddingHorizontal: 18,
-    justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: colors.secondarySoft,
+
+  title: {
+    flex: 1,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#050505',
   },
-  secondaryActionLabel: {
-    color: colors.secondary,
-    fontWeight: '800',
+
+  headerSpace: {
+    width: 45,
   },
-  threadCard: {
-    padding: 18,
-    borderRadius: 22,
-    backgroundColor: '#FFF8F2',
+
+  list: {
+    gap: 38,
+  },
+
+  card: {
+    height: 108,
+    borderRadius: 54,
+    backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: colors.border,
-  },
-  threadTopRow: {
+    borderColor: '#E2E0DC',
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 8,
+    alignItems: 'center',
+    paddingLeft: 18,
+    paddingRight: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
   },
-  threadName: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: colors.text,
+
+  avatar: {
+    width: 76,
+    height: 76,
+    borderRadius: 38,
+    marginRight: 18,
   },
-  threadTime: {
-    color: colors.mutedText,
-    fontSize: 12,
+
+  textArea: {
+    flex: 1,
   },
-  threadMessage: {
+
+  name: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#111',
+    marginBottom: 12,
+  },
+
+  previewBubble: {
+    backgroundColor: '#E9E7E4',
+    borderRadius: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 14,
+  },
+
+  previewText: {
     fontSize: 14,
-    lineHeight: 21,
-    color: colors.mutedText,
+    fontWeight: '700',
+    color: '#111',
   },
 });

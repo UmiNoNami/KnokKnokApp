@@ -60,7 +60,7 @@ export default function AppTabs() {
               icon={require('../../assets/icons/message.png')}
               focused={focused}
               color={color}
-              label="Messages"
+              label="Chats"
             />
           ),
         }}
