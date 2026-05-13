@@ -10,81 +10,65 @@ import {
   Text,
   TextInput,
   View,
+  Alert,
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+
+import {
+  collection,
+  addDoc,
+  query,
+  orderBy,
+  onSnapshot,
+  serverTimestamp,
+  doc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+} from 'firebase/firestore';
+
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+
 import AppScreen from '../components/AppScreen';
+import { db, storage } from '../firebase/firebaseConfig';
 
 export default function ChatScreen({ navigation, route }) {
- const { conversation, isNewMatch } = route.params;
+  const { conversation = {} } = route.params || {};
 
-  const storageKey = `chat_${conversation.id}`;
   const scrollViewRef = useRef(null);
 
-  const defaultMessages = [
-    {
-      id: '1',
-      type: 'text',
-      fromMe: false,
-      text: 'Hi Andrew, May I ask you some questions?',
-      time: '11:56 AM',
-    },
-    {
-      id: '2',
-      type: 'text',
-      fromMe: false,
-      text: 'Is that ok?',
-      time: '11:56 AM',
-    },
-    {
-      id: '3',
-      type: 'text',
-      fromMe: true,
-      text: 'Hi Edoardo, sure!\nHow can I help you?',
-      time: '11:58 AM',
-    },
-  ];
+  const currentUserId = 'demoUser';
+  const otherUserId = conversation.id || 'unknownUser';
+
+  const chatId =
+    conversation.chatId || [currentUserId, otherUserId].sort().join('_');
 
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
+  const [editingMessageId, setEditingMessageId] = useState(null);
 
   useEffect(() => {
-    const loadMessages = async () => {
-      try {
-        const savedMessages = await AsyncStorage.getItem(storageKey);
+    const messagesRef = collection(db, 'chats', chatId, 'messages');
+    const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
-        if (savedMessages) {
-          setMessages(JSON.parse(savedMessages));
-        }
-      } catch (error) {
-        console.log('Failed to load messages:', error);
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const loadedMessages = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setMessages(loadedMessages);
+        scrollToBottom();
+      },
+      (error) => {
+        console.log('Chat load error:', error);
       }
-    };
+    );
 
-    loadMessages();
-  }, [storageKey]);
-
-     useEffect(() => {
-  const loadMessages = async () => {
-    try {
-      if (isNewMatch) {
-        setMessages([]);
-        await AsyncStorage.removeItem(storageKey);
-        return;
-      }
-
-      const savedMessages = await AsyncStorage.getItem(storageKey);
-
-      if (savedMessages) {
-        setMessages(JSON.parse(savedMessages));
-      }
-    } catch (error) {
-      console.log('Failed to load messages:', error);
-    }
-  };
-
-  loadMessages();
-}, [storageKey, isNewMatch]);
+    return unsubscribe;
+  }, [chatId]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -92,29 +76,115 @@ export default function ChatScreen({ navigation, route }) {
     }, 100);
   };
 
-  const getCurrentTime = () => {
-    return new Date().toLocaleTimeString([], {
+  const formatTime = (createdAt) => {
+    if (!createdAt?.toDate) return '';
+
+    return createdAt.toDate().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
     });
   };
 
-  const sendMessage = () => {
+  const deleteMessage = async (messageId) => {
+    try {
+      await deleteDoc(doc(db, 'chats', chatId, 'messages', messageId));
+    } catch (error) {
+      console.log('Delete message error:', error);
+    }
+  };
+
+  const showMessageOptions = (message) => {
+    Alert.alert('Message options', 'Choose an action', [
+      {
+        text: 'Edit',
+        onPress: () => {
+          setEditingMessageId(message.id);
+          setText(message.text);
+        },
+      },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteMessage(message.id),
+      },
+      {
+        text: 'Cancel',
+        style: 'cancel',
+      },
+    ]);
+  };
+
+  const sendMessage = async () => {
     const trimmed = text.trim();
 
     if (!trimmed) return;
 
-    const newMessage = {
-      id: Date.now().toString(),
-      type: 'text',
-      fromMe: true,
-      text: trimmed,
-      time: getCurrentTime(),
-    };
+    if (editingMessageId) {
+      try {
+        await updateDoc(
+          doc(db, 'chats', chatId, 'messages', editingMessageId),
+          {
+            text: trimmed,
+            edited: true,
+          }
+        );
 
-    setMessages((current) => [...current, newMessage]);
-    setText('');
-    scrollToBottom();
+        await setDoc(
+          doc(db, 'chats', chatId),
+          {
+            lastMessage: trimmed,
+            updatedAt: serverTimestamp(),
+          },
+          { merge: true }
+        );
+
+        setText('');
+        setEditingMessageId(null);
+        return;
+      } catch (error) {
+        console.log('Edit message error:', error);
+      }
+    }
+
+    try {
+      const chatRef = doc(db, 'chats', chatId);
+
+      await setDoc(
+        chatRef,
+        {
+          participants: [currentUserId, otherUserId],
+          otherName: conversation.name || 'Chat',
+          otherAvatar: conversation.avatar || null,
+          lastMessage: trimmed,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        type: 'text',
+        text: trimmed,
+        senderId: currentUserId,
+        createdAt: serverTimestamp(),
+      });
+
+      setText('');
+      scrollToBottom();
+    } catch (error) {
+      console.log('Send message error:', error);
+    }
+  };
+
+  const uploadImageAsync = async (uri) => {
+    const response = await fetch(uri);
+    const blob = await response.blob();
+
+    const fileName = `chatImages/${chatId}_${Date.now()}.jpg`;
+    const storageRef = ref(storage, fileName);
+
+    await uploadBytes(storageRef, blob);
+
+    return await getDownloadURL(storageRef);
   };
 
   const pickImage = async () => {
@@ -132,17 +202,44 @@ export default function ChatScreen({ navigation, route }) {
 
     if (result.canceled) return;
 
-    const imageMessage = {
-      id: Date.now().toString(),
-      type: 'image',
-      fromMe: true,
-      image: result.assets[0].uri,
-      time: getCurrentTime(),
-    };
+    try {
+      const localUri = result.assets[0].uri;
+      const imageUrl = await uploadImageAsync(localUri);
 
-    setMessages((current) => [...current, imageMessage]);
-    scrollToBottom();
+      const chatRef = doc(db, 'chats', chatId);
+
+      await setDoc(
+        chatRef,
+        {
+          participants: [currentUserId, otherUserId],
+          otherName: conversation.name || 'Chat',
+          otherAvatar: conversation.avatar || null,
+          lastMessage: 'Photo shared',
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        type: 'image',
+        image: imageUrl,
+        senderId: currentUserId,
+        createdAt: serverTimestamp(),
+      });
+
+      scrollToBottom();
+    } catch (error) {
+      console.log('Upload image error:', error);
+      alert('Failed to upload image.');
+    }
   };
+
+  const avatarSource =
+    typeof conversation.avatar === 'number'
+      ? conversation.avatar
+      : conversation.avatar
+        ? { uri: conversation.avatar }
+        : require('../../assets/rooms/room1.jpg');
 
   return (
     <AppScreen padded={false}>
@@ -156,7 +253,7 @@ export default function ChatScreen({ navigation, route }) {
               <Text style={styles.back}>‹</Text>
             </Pressable>
 
-            <Text style={styles.title}>{conversation.name}</Text>
+            <Text style={styles.title}>{conversation.name || 'Chat'}</Text>
 
             <View style={styles.headerSpace} />
           </View>
@@ -170,33 +267,65 @@ export default function ChatScreen({ navigation, route }) {
             keyboardDismissMode="on-drag"
             onContentSizeChange={scrollToBottom}
           >
+            {messages.length === 0 && !editingMessageId && (
+              <View style={styles.emptyChatBox}>
+                <Text style={styles.emptyChatText}>Start a chat 👋</Text>
+                <Text style={styles.emptyChatSubText}>
+                  Send a message to begin the conversation.
+                </Text>
+              </View>
+            )}
+
             {messages.map((message) => {
-              if (message.fromMe) {
+              const fromMe = message.senderId === currentUserId;
+
+              if (fromMe) {
                 return (
                   <View key={message.id} style={styles.rightRow}>
                     {message.type === 'image' ? (
-                      <Image source={{ uri: message.image }} style={styles.sentImage} />
+                      <Image
+                        source={{ uri: message.image }}
+                        style={styles.sentImage}
+                      />
                     ) : (
-                      <View style={styles.rightBubble}>
+                      <Pressable
+                        style={styles.rightBubble}
+                        onLongPress={() => showMessageOptions(message)}
+                      >
                         <Text style={styles.messageText}>{message.text}</Text>
-                      </View>
+
+                        {message.edited && (
+                          <Text style={styles.editedText}>edited</Text>
+                        )}
+                      </Pressable>
                     )}
 
-                    <Text style={styles.timeRight}>{message.time}</Text>
+                    <Text style={styles.timeRight}>
+                      {formatTime(message.createdAt)}
+                    </Text>
                   </View>
                 );
               }
 
               return (
                 <View key={message.id} style={styles.leftRow}>
-                  <Image source={{ uri: conversation.avatar }} style={styles.smallAvatar} />
+                  <Image source={avatarSource} style={styles.smallAvatar} />
 
                   <View>
-                    <View style={styles.leftBubble}>
-                      <Text style={styles.messageText}>{message.text}</Text>
-                    </View>
+                    {message.type === 'image' ? (
+                      <Image
+                        source={{ uri: message.image }}
+                        style={styles.sentImage}
+                      />
+                    ) : (
+                      <View style={styles.leftBubble}>
+                        <Text style={styles.messageText}>{message.text}</Text>
+                      </View>
+                    )}
 
-                    <Text style={styles.timeLeft}>{message.time}</Text>
+                    <Text style={styles.timeLeft}>
+                      {formatTime(message.createdAt)}
+                    </Text>
                   </View>
                 </View>
               );
@@ -212,17 +341,19 @@ export default function ChatScreen({ navigation, route }) {
               <TextInput
                 value={text}
                 onChangeText={setText}
-                placeholder="Type Message"
+                placeholder={editingMessageId ? 'Edit message' : 'Type Message'}
                 placeholderTextColor="#D4D4D4"
                 style={styles.input}
-                returnKeyType="send"
+                returnKeyType={editingMessageId ? 'done' : 'send'}
                 onSubmitEditing={sendMessage}
                 onBlur={Keyboard.dismiss}
               />
             </View>
 
             <Pressable style={styles.sendButton} onPress={sendMessage}>
-              <Text style={styles.sendText}>Send</Text>
+              <Text style={styles.sendText}>
+                {editingMessageId ? 'Save' : 'Send'}
+              </Text>
             </Pressable>
           </View>
         </View>
@@ -319,6 +450,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  editedText: {
+    fontSize: 11,
+    color: '#999',
+    marginTop: 4,
+    textAlign: 'right',
+  },
+
   timeLeft: {
     fontSize: 12,
     color: '#999',
@@ -395,5 +533,24 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#111',
+  },
+
+  emptyChatBox: {
+    alignItems: 'center',
+    marginTop: 120,
+    paddingHorizontal: 30,
+  },
+
+  emptyChatText: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#050505',
+    marginBottom: 8,
+  },
+
+  emptyChatSubText: {
+    fontSize: 14,
+    color: '#777',
+    textAlign: 'center',
   },
 });

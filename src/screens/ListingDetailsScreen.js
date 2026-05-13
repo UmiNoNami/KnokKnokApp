@@ -10,11 +10,27 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import AppScreen from '../components/AppScreen';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase/firebaseConfig';
 
 export default function ListingDetailsScreen({ navigation, route }) {
   const { item } = route.params;
-  
-  const isAccommodation = item?.price !== undefined;
+
+  const isAccommodation = item?.price !== undefined || item?.houseImages;
+
+  const mainImage = isAccommodation
+    ? item.houseImages?.[0]
+      ? { uri: item.houseImages[0] }
+      : require('../../assets/rooms/room1.jpg')
+    : item.profilePhoto
+      ? { uri: item.profilePhoto }
+      : require('../../assets/rooms/room1.jpg');
+
+  const hostAvatar =
+    item.hostAvatar
+      ? { uri: item.hostAvatar }
+      : require('../../assets/rooms/room1.jpg');
+
   const [showMatch, setShowMatch] = useState(false);
   const [showMessagePrompt, setShowMessagePrompt] = useState(false);
 
@@ -33,21 +49,57 @@ export default function ListingDetailsScreen({ navigation, route }) {
     setShowMessagePrompt(false);
   };
 
-const goToChat = () => {
-  closeMatchModal();
+  const goToChat = async () => {
+    closeMatchModal();
 
-  navigation.navigate('Chat', {
-    conversation: {
-      id: `match_${item.id}`,
-      name: item.title || 'House profile',
-      avatar:
-        typeof item.image === 'number'
-          ? Image.resolveAssetSource(item.image).uri
-          : item.image.uri,
-    },
-    isNewMatch: true,
-  });
-};
+    const currentUserId = 'demoUser';
+    const otherUserId = `match_${item.id}`;
+    const chatId = [currentUserId, otherUserId].sort().join('_');
+
+    const otherName = isAccommodation
+      ? item.hostName || 'Host'
+      : item.name || 'Profile';
+
+    const otherAvatar = isAccommodation
+      ? item.hostAvatar || null
+      : item.profilePhoto || null;
+
+    const listingTitle = isAccommodation
+      ? item.title || 'Listing'
+      : '';
+
+    const listingImage = isAccommodation
+      ? item.houseImages?.[0] || null
+      : null;
+
+    await setDoc(
+      doc(db, 'chats', chatId),
+      {
+        participants: [currentUserId, otherUserId],
+        otherName,
+        otherAvatar,
+        listingTitle,
+        listingImage,
+        matchMessage: 'You matched with this user. Say hi 👋',
+        lastMessage: '',
+        updatedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+
+    navigation.navigate('Chat', {
+      conversation: {
+        chatId,
+        id: otherUserId,
+        name: otherName,
+        avatar: otherAvatar,
+        listingTitle,
+        listingImage,
+      },
+      isNewMatch: true,
+    });
+  };
+
   return (
     <AppScreen padded={false}>
       <ScrollView
@@ -55,68 +107,222 @@ const goToChat = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-  <Pressable onPress={() => navigation.goBack()}>
-    <Text style={styles.back}>‹</Text>
-  </Pressable>
+          <Pressable onPress={() => navigation.goBack()}>
+            <Text style={styles.back}>‹</Text>
+          </Pressable>
 
-  <Text style={styles.title}>
-    {isAccommodation ? 'House Profile' : 'Profile'}
-  </Text>
+          <Text style={styles.title}>
+            {isAccommodation ? 'House Profile' : 'Profile'}
+          </Text>
 
-  <View style={styles.headerSpace} />
-</View>
+          <View style={styles.headerSpace} />
+        </View>
 
         <View style={styles.imageWrap}>
-          <Image
-  source={item.imageUrl ? { uri: item.imageUrl } : item.image}
-  style={styles.image}
-/>
+          <Image source={mainImage} style={styles.image} />
 
-          <View style={styles.dots}>
-            <View style={[styles.dot, styles.activeDot]} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-            <View style={styles.dot} />
-          </View>
+          {isAccommodation && (
+            <View style={styles.dots}>
+              <View style={[styles.dot, styles.activeDot]} />
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+              <View style={styles.dot} />
+            </View>
+          )}
         </View>
 
         <View style={styles.infoBlock}>
           <Text style={styles.houseTitle}>
-            {item.title || 'Single bedroom'}
+            {isAccommodation
+              ? item.title || 'Listing'
+              : item.name || 'Profile'}
           </Text>
+
           <Text style={styles.location}>
-            {item.location || 'Smithfield D07'}
+            {isAccommodation
+              ? item.area || 'Area not added'
+              : `${item.age || ''}${item.age ? ', ' : ''}${
+                  item.occupation || 'Seeker'
+                }`}
           </Text>
-          <Text style={styles.meta}>2 Beds - 1 Bath - House</Text>
+
+          {isAccommodation ? (
+            <>
+              <Text style={styles.meta}>
+                {item.price ? `€${item.price}/week` : 'Price not added'}
+              </Text>
+
+              <View style={styles.hostRow}>
+                <Image source={hostAvatar} style={styles.hostAvatar} />
+
+                <Text style={styles.hostText}>
+                  Hosted by {item.hostName || 'Host'}
+                </Text>
+              </View>
+            </>
+          ) : (
+            <Text style={styles.meta}>
+              Looking for accommodation
+            </Text>
+          )}
         </View>
 
-        <Text style={styles.sectionTitle}>Bio</Text>
+        <Text style={styles.sectionTitle}>
+          {isAccommodation ? 'Description' : 'Bio'}
+        </Text>
+
         <View style={styles.card}>
           <Text style={styles.body}>
-            Single bedroom available in a calm and peaceful house. The room is
-            ideal for one person looking for a comfortable and friendly place to
-            live.
+            {isAccommodation
+              ? item.description || 'No description added yet.'
+              : item.bio || 'No bio added yet.'}
           </Text>
         </View>
 
-        <Text style={styles.sectionTitle}>Description</Text>
+        <Text style={styles.sectionTitle}>
+          {isAccommodation ? 'Details' : 'Lifestyle'}
+        </Text>
+
         <View style={styles.card}>
-          <View style={styles.row}>
-            <Text style={styles.label}>Number of tenants:</Text>
-            <Text style={styles.value}>3</Text>
+
+          {isAccommodation ? (
+  <>
+    <View style={styles.row}>
+      <Text style={styles.label}>Area:</Text>
+      <Text style={styles.value}>{item.area || 'Not added'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Price:</Text>
+      <Text style={styles.value}>
+        {item.price ? `€${item.price}/week` : 'Not added'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Bills:</Text>
+      <Text style={styles.value}>
+        {item.billsIncluded ? 'Included' : 'Not included'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Accommodation:</Text>
+      <Text style={styles.value}>
+        {Array.isArray(item.accommodationType)
+          ? item.accommodationType.join(', ')
+          : item.accommodationType || 'Not added'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Room type:</Text>
+      <Text style={styles.value}>
+        {Array.isArray(item.roomType)
+          ? item.roomType.join(', ')
+          : item.roomType || 'Not added'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Tenants:</Text>
+      <Text style={styles.value}>{item.tenants ?? 'Not added'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Bedrooms:</Text>
+      <Text style={styles.value}>
+        {item.bedroomCount ?? item.bedrooms ?? 'Not added'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Bathrooms:</Text>
+      <Text style={styles.value}>
+        {item.bathroomCount ?? item.bathrooms ?? 'Not added'}
+      </Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Wifi:</Text>
+      <Text style={styles.value}>{item.wifi ? 'Yes' : 'No'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Furnished:</Text>
+      <Text style={styles.value}>{item.furnished ? 'Yes' : 'No'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Living room:</Text>
+      <Text style={styles.value}>{item.livingRoom ? 'Yes' : 'No'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <View style={styles.row}>
+      <Text style={styles.label}>Garden/Balcony:</Text>
+      <Text style={styles.value}>{item.gardenBalcony ? 'Yes' : 'No'}</Text>
+    </View>
+
+    <View style={styles.divider} />
+
+    <Text style={styles.label}>Lifestyle Preferences:</Text>
+
+    <View style={styles.tagsWrap}>
+      {Array.isArray(item.lifestyle) && item.lifestyle.length > 0 ? (
+        item.lifestyle.map((tag) => (
+          <View key={tag} style={styles.tag}>
+            <Text style={styles.tagText}>{tag}</Text>
           </View>
-
-          <View style={styles.divider} />
-
-          <Text style={styles.label}>Lifestyle Preferences:</Text>
-
-          <View style={styles.tagsWrap}>
-            {tags.map((tag) => (
-              <View key={tag} style={styles.tag}>
-                <Text style={styles.tagText}>{tag}</Text>
+        ))
+      ) : (
+        <Text style={styles.emptyText}>No lifestyle preferences added.</Text>
+      )}
+    </View>
+  </>
+) : (
+            <>
+              <View style={styles.row}>
+                <Text style={styles.label}>Occupation:</Text>
+                <Text style={styles.value}>
+                  {item.occupation || 'Not added'}
+                </Text>
               </View>
-            ))}
-          </View>
+
+              <View style={styles.divider} />
+
+              <Text style={styles.label}>Lifestyle Preferences:</Text>
+
+              <View style={styles.tagsWrap}>
+                {tags.map((tag) => (
+                  <View key={tag} style={styles.tag}>
+                    <Text style={styles.tagText}>{tag}</Text>
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </ScrollView>
 
@@ -126,14 +332,14 @@ const goToChat = () => {
         </Pressable>
 
         <Pressable
-  style={styles.circleButton}
-  onPress={() => {
-    console.log(' Heart pressed');
-    handleLike();
-  }}
->
-  <Text style={styles.heartIcon}>♡</Text>
-</Pressable>
+          style={styles.circleButton}
+          onPress={() => {
+            console.log('Heart pressed');
+            handleLike();
+          }}
+        >
+          <Text style={styles.heartIcon}>♡</Text>
+        </Pressable>
       </View>
 
       <Modal transparent visible={showMatch} animationType="fade">
@@ -323,30 +529,30 @@ const styles = StyleSheet.create({
   },
 
   actionRow: {
-  position: 'absolute',
-  left: 75,
-  right: 75,
-  bottom: 108,
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  zIndex: 999,
-  elevation: 999,
-},
+    position: 'absolute',
+    left: 75,
+    right: 75,
+    bottom: 108,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 999,
+    elevation: 999,
+  },
 
-circleButton: {
-  width: 62,
-  height: 62,
-  borderRadius: 31,
-  backgroundColor: '#FFFFFF',
-  alignItems: 'center',
-  justifyContent: 'center',
-  shadowColor: '#000',
-  shadowOpacity: 0.12,
-  shadowRadius: 8,
-  shadowOffset: { width: 0, height: 3 },
-  elevation: 20,
-  zIndex: 1000,
-},
+  circleButton: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 20,
+    zIndex: 1000,
+  },
 
   closeIcon: {
     fontSize: 48,
@@ -413,5 +619,24 @@ circleButton: {
   optionText: {
     fontSize: 16,
     color: '#000',
+  },
+
+  hostRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 14,
+  },
+
+  hostAvatar: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginRight: 10,
+  },
+
+  hostText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#222',
   },
 });

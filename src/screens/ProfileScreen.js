@@ -25,16 +25,19 @@ const IMAGE_WIDTH = width - 44;
 
 export default function ProfileScreen() {
   const { profileDraft } = useAppState();
+  const isAccommodationSeeker = profileDraft?.role === 'seeker';
 
   const [isEditing, setIsEditing] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
   const [name, setName] = useState('');
-  const [accommodationType, setAccommodationType] = useState([]);
-const [roomType, setRoomType] = useState([]);
   const [bio, setBio] = useState('');
   const [dateOfBirth, setDateOfBirth] = useState('');
   const [job, setJob] = useState('');
+  const [location, setLocation] = useState('');
+
+  const [accommodationType, setAccommodationType] = useState([]);
+  const [roomType, setRoomType] = useState([]);
 
   const [tenants, setTenants] = useState('0');
   const [bedroomCount, setBedroomCount] = useState('0');
@@ -60,17 +63,17 @@ const [roomType, setRoomType] = useState([]);
       data?.images ||
       [];
 
+      
+
     if (!Array.isArray(possiblePhotos)) return [];
 
-    return possiblePhotos.filter((photo) => typeof photo === 'string' && photo.trim() !== '');
+    return possiblePhotos.filter(
+      (photo) => typeof photo === 'string' && photo.trim() !== ''
+    );
   };
 
   const cleanTags = (data) => {
-    const possibleTags =
-      data?.lifestyleTags ||
-      data?.lifestyle ||
-      data?.preferences ||
-      [];
+    const possibleTags = data?.lifestyle || [];
 
     if (!Array.isArray(possibleTags)) return [];
 
@@ -82,6 +85,10 @@ const [roomType, setRoomType] = useState([]);
     setBio(data?.bio || '');
     setDateOfBirth(data?.dateOfBirth || '');
     setJob(data?.job || '');
+    setLocation(data?.location || '');
+
+    setAccommodationType(data?.accommodationType || []);
+    setRoomType(data?.roomType || []);
 
     setTenants(String(data?.tenants ?? '0'));
     setBedroomCount(String(data?.bedroomCount ?? data?.bedrooms ?? '0'));
@@ -154,6 +161,9 @@ const [roomType, setRoomType] = useState([]);
         bio,
         dateOfBirth,
         job,
+        location,
+        accommodationType,
+        roomType,
         tenants: Number(tenants),
         bedroomCount: Number(bedroomCount),
         bathroomCount: Number(bathroomCount),
@@ -163,7 +173,7 @@ const [roomType, setRoomType] = useState([]);
         gardenBalcony,
         price: Number(price),
         billsIncluded,
-        lifestyleTags: selectedTags,
+        lifestyle: selectedTags,
         photos,
       };
 
@@ -237,7 +247,11 @@ const [roomType, setRoomType] = useState([]);
         <View style={styles.header}>
           <Image source={require('../../assets/icons/house.png')} style={styles.homeIcon} />
           <Text style={styles.title}>Your Profile</Text>
-
+              <Text style={styles.roleText}>
+           {isAccommodationSeeker
+            ? 'Looking for a place'
+            : 'Need tenants / roommate'}
+            </Text>
           <Pressable onPress={handleSave}>
             <Text style={styles.edit}>{isEditing ? 'Save' : 'Edit'}</Text>
           </Pressable>
@@ -281,7 +295,16 @@ const [roomType, setRoomType] = useState([]);
         </View>
 
         {isEditing ? (
-          <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Name" />
+          <>
+            <TextInput value={name} onChangeText={setName} style={styles.input} placeholder="Name" />
+            <TextInput value={job} onChangeText={setJob} style={styles.input} placeholder="Job" />
+            <TextInput
+              value={location}
+              onChangeText={setLocation}
+              style={styles.input}
+              placeholder="Location"
+            />
+          </>
         ) : (
           <View style={styles.nameBlock}>
             <Text style={styles.name}>{name || 'No name added'}</Text>
@@ -289,6 +312,7 @@ const [roomType, setRoomType] = useState([]);
               {calculateAge(dateOfBirth)}
               {calculateAge(dateOfBirth) && job ? ', ' : ''}
               {job}
+              {location ? `, ${location}` : ''}
             </Text>
           </View>
         )}
@@ -310,9 +334,75 @@ const [roomType, setRoomType] = useState([]);
           )}
         </View>
 
-        <Text style={styles.sectionTitle}>Description</Text>
+                
+    <Text style={styles.sectionTitle}>Description</Text>
 
-        <View style={styles.card}>
+    <View style={styles.card}>
+
+          <Text style={styles.label}>Accommodation Type:</Text>
+
+{isEditing ? (
+  <View style={styles.tagsWrap}>
+    {['House', 'Apartment', 'Studio'].map((type) => (
+      <Pressable
+        key={type}
+        onPress={() =>
+          setAccommodationType((prev) =>
+            prev.includes(type)
+              ? prev.filter((item) => item !== type)
+              : [...prev, type]
+          )
+        }
+        style={[
+          styles.tag,
+          accommodationType.includes(type) && styles.selectedTag,
+        ]}
+      >
+        <Text style={styles.tagText}>{type}</Text>
+      </Pressable>
+    ))}
+  </View>
+) : (
+  <Text style={styles.value}>
+    {accommodationType.length > 0 ? accommodationType.join(', ') : 'Not added'}
+  </Text>
+)}
+
+<View style={styles.divider} />
+
+<Text style={styles.label}>Room Type:</Text>
+
+{isEditing ? (
+  <View style={styles.tagsWrap}>
+    {['Single', 'Double', 'Twin', 'Shared'].map((type) => (
+      <Pressable
+        key={type}
+        onPress={() =>
+  setRoomType((prev) =>
+    prev.includes(type)
+      ? prev.filter((item) => item !== type)
+      : [...prev, type]
+  )
+}
+        style={[
+          styles.tag,
+          roomType.includes(type) && styles.selectedTag,
+        ]}
+      >
+        <Text style={styles.tagText}>{type}</Text>
+      </Pressable>
+    ))}
+  </View>
+) : (
+  <Text style={styles.value}>
+    {roomType.length > 0 ? roomType.join(', ') : 'Not added'}
+  </Text>
+)}
+
+<View style={styles.divider} />
+
+          <View style={styles.divider} />
+
           <EditableNumberRow label="Number of tenants:" value={tenants} onChange={setTenants} />
           <EditableNumberRow label="Bedrooms:" value={bedroomCount} onChange={setBedroomCount} />
           <EditableNumberRow label="Bathrooms:" value={bathroomCount} onChange={setBathroomCount} />
@@ -361,52 +451,65 @@ const [roomType, setRoomType] = useState([]);
             </View>
           )}
         </View>
+        
+{isAccommodationSeeker && (
+  <>
+    <Text style={styles.sectionTitle}>Budget</Text>
 
-        <Text style={styles.sectionTitle}>Budget</Text>
+    <View style={styles.card}>
+      {isEditing ? (
+        <>
+          <Text style={styles.label}>Price Range</Text>
 
-        <View style={styles.card}>
-          {isEditing ? (
-            <>
-              <Text style={styles.label}>Price Range</Text>
+          <Slider
+            style={styles.slider}
+            minimumValue={100}
+            maximumValue={1000}
+            step={50}
+            value={Number(price)}
+            onValueChange={setPrice}
+            minimumTrackTintColor="#222"
+            maximumTrackTintColor="#D8D8D8"
+            thumbTintColor="#222"
+          />
 
-              <Slider
-                style={styles.slider}
-                minimumValue={100}
-                maximumValue={1000}
-                step={50}
-                value={Number(price)}
-                onValueChange={setPrice}
-                minimumTrackTintColor="#222"
-                maximumTrackTintColor="#D8D8D8"
-                thumbTintColor="#222"
-              />
+          <Text style={styles.price}>€{price}</Text>
+          <Text style={styles.perWeek}>per week</Text>
 
-              <Text style={styles.price}>€{price}</Text>
-              <Text style={styles.perWeek}>per week</Text>
+          <View style={styles.divider} />
 
-              <View style={styles.divider} />
+          <View style={styles.row}>
+            <Text style={styles.label}>Bills Included:</Text>
+            <Switch
+              value={billsIncluded}
+              onValueChange={setBillsIncluded}
+            />
+          </View>
+        </>
+      ) : (
+        <>
+          <View style={styles.row}>
+            <Text style={styles.label}>Price Range:</Text>
 
-              <View style={styles.row}>
-                <Text style={styles.label}>Bills Included:</Text>
-                <Switch value={billsIncluded} onValueChange={setBillsIncluded} />
-              </View>
-            </>
-          ) : (
-            <>
-              <View style={styles.row}>
-                <Text style={styles.label}>Price Range:</Text>
-                <Text style={styles.value}>€{price} per week</Text>
-              </View>
+            <Text style={styles.value}>
+              €{price} per week
+            </Text>
+          </View>
 
-              <View style={styles.divider} />
+          <View style={styles.divider} />
 
-              <View style={styles.row}>
-                <Text style={styles.label}>Bills:</Text>
-                <Text style={styles.value}>{billsIncluded ? 'Included' : 'Not included'}</Text>
-              </View>
-            </>
-          )}
-        </View>
+          <View style={styles.row}>
+            <Text style={styles.label}>Bills:</Text>
+
+            <Text style={styles.value}>
+              {billsIncluded ? 'Included' : 'Not included'}
+            </Text>
+          </View>
+        </>
+      )}
+    </View>
+  </>
+)}
 
         <View style={styles.accountBox}>
           <Text style={styles.accountText}>Log Out</Text>
@@ -658,4 +761,12 @@ const styles = StyleSheet.create({
     color: '#D00000',
     paddingVertical: 28,
   },
+
+  roleText: {
+  position: 'absolute',
+  top: 34,
+  alignSelf: 'center',
+  fontSize: 12,
+  color: '#777',
+},
 });

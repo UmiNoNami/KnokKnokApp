@@ -9,6 +9,7 @@ import {
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import SelectableChip from '../components/SelectableChip';
+import { saveProfileToFirebase } from '../services/profileService';
 
 export default function LifestyleScreen({ navigation }) {
   const [selectedItems, setSelectedItems] = useState([]);
@@ -90,13 +91,21 @@ export default function LifestyleScreen({ navigation }) {
           <View style={styles.buttonWrapper}>
             <CustomButton
             title="Next"
-             onPress={() => {
-             updateProfile({
-             lifestyleTags: selectedItems,
-              });
+     onPress={async () => {
+  try {
+    if (selectedItems.length === 0) return;
 
-            navigation.navigate('CreateProfile');
-            }}
+    updateProfile({ lifestyle: selectedItems });
+
+    await saveProfileToFirebase({
+      lifestyle: selectedItems,
+    });
+
+    navigation.navigate('CreateProfile');
+  } catch (error) {
+    console.log('ERROR:', error);
+  }
+}}
 />
           </View>
         </View>

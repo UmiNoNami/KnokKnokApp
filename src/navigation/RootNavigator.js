@@ -15,6 +15,8 @@ import LookingForScreen from '../screens/LookingForScreen.js';
 import CreateProfileScreen from '../screens/CreateProfileScreen';
 import ChatScreen from '../screens/ChatScreen';
 import ListingDetailsScreen from '../screens/ListingDetailsScreen';
+import SearchScreen from '../screens/SearchScreen';
+import MapScreen from '../screens/MapScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,6 +43,14 @@ export default function RootNavigator() {
         <Stack.Screen name="Chat" component={ChatScreen} options={{ headerShown: false }}/>
         <Stack.Screen name="ListingDetails" component={ListingDetailsScreen}  options={{ headerShown: false }} />
         <Stack.Screen name="Main" component={AppTabs} />
+        <Stack.Screen name="Search" component={SearchScreen} />
+  <Stack.Screen
+  name="Map"
+  component={MapScreen}
+  options={{ headerShown: true, title: 'Back' }}
+/>
+        
+        
       </Stack.Navigator>
     </NavigationContainer>
   );

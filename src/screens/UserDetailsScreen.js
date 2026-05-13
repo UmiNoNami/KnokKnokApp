@@ -1,4 +1,5 @@
 import React, { useMemo, useState } from 'react';
+import { saveProfileToFirebase } from '../services/profileService';
 import {
   Keyboard,
   KeyboardAvoidingView,
@@ -211,17 +212,24 @@ export default function UserDetailsScreen({ navigation }) {
 
               <View style={styles.buttonWrapper}>
        <CustomButton
-  title="Next"
-  onPress={() => {
-    updateProfile({
-  name,
-  job,
-  gender: genderValue,
-  dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
-});
+title="Next"
+onPress={async () => {
+  updateProfile({
+    name,
+    job,
+    gender: genderValue,
+    dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
+  });
 
-    navigation.navigate('LookingFor');
-  }}
+  await saveProfileToFirebase({
+    name,
+    job,
+    gender: genderValue,
+    dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
+  });
+
+  navigation.navigate('LookingFor');
+}}
 />
 </View>
             </View>

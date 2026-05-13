@@ -16,6 +16,7 @@ import Slider from '@react-native-community/slider';
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import { useAppState } from '../providers/AppProvider';
+import { saveProfileToFirebase } from '../services/profileService';
 
 export default function AccommodationDetailsScreen({ navigation }) {
   const [tenantsCount, setTenantsCount] = useState(0);
@@ -223,22 +224,35 @@ export default function AccommodationDetailsScreen({ navigation }) {
               <View style={styles.buttonWrapper}>
                      <CustomButton
                       title="Next"
-                     onPress={() => {
-                      updateProfile({
-  tenants: tenantsCount,
-  bathroomCount,
-  bedroomCount,
-  livingRoom,
-  gardenBalcony,
-  wifi,
-  furnished,
-  billsIncluded: billIncluded,
-  price: priceRange,
-  location,
-});
+           onPress={async () => {
+  updateProfile({
+    tenants: tenantsCount,
+    bathroomCount,
+    bedroomCount,
+    livingRoom,
+    gardenBalcony,
+    wifi,
+    furnished,
+    billsIncluded: billIncluded,
+    price: priceRange,
+    location,
+  });
 
-    navigation.navigate('Lifestyle');
-  }}
+  await saveProfileToFirebase({
+    tenants: tenantsCount,
+    bathroomCount,
+    bedroomCount,
+    livingRoom,
+    gardenBalcony,
+    wifi,
+    furnished,
+    billsIncluded: billIncluded,
+    price: priceRange,
+    location,
+  });
+
+  navigation.navigate('Lifestyle');
+}}
 />
 
               </View>

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useAppState } from '../providers/AppProvider';
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
+import { saveProfileToFirebase } from '../services/profileService';
 
 export default function AccommodationTypeScreen({ navigation }) {
   const [selectedAccommodation, setSelectedAccommodation] = useState([]);
@@ -135,21 +136,26 @@ export default function AccommodationTypeScreen({ navigation }) {
         <View style={styles.buttonWrapper}>
            <CustomButton
   title="Next"
-  onPress={() => {
-    if (
-      selectedAccommodation.length === 0 ||
-      selectedRoomTypes.length === 0
-    ) {
-      return;
-    }
+  onPress={async () => {
+  if (
+    selectedAccommodation.length === 0 ||
+    selectedRoomTypes.length === 0
+  ) {
+    return;
+  }
 
-    updateProfile({
-      accommodationType: selectedAccommodation,
-      roomType: selectedRoomTypes,
-    });
+  updateProfile({
+    accommodationType: selectedAccommodation,
+    roomType: selectedRoomTypes,
+  });
 
-    navigation.navigate('AccommodationDetails');
-  }}
+  await saveProfileToFirebase({
+    accommodationType: selectedAccommodation,
+    roomType: selectedRoomTypes,
+  });
+
+  navigation.navigate('AccommodationDetails');
+}}
 />
         </View>
       </View>
