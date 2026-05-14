@@ -1,9 +1,11 @@
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
-import { db } from '../firebase/firebaseConfig';
+import { db, auth } from '../firebase/firebaseConfig';
 
-const USER_ID = 'demoUser';
+const getUserId = () => auth.currentUser?.uid || 'demoUser';
 
 export async function saveProfileToFirebase(profileData) {
+  const USER_ID = getUserId();
+
   await setDoc(
     doc(db, 'users', USER_ID),
     {
@@ -18,6 +20,8 @@ export async function saveProfileToFirebase(profileData) {
 }
 
 export async function getProfileFromFirebase() {
+  const USER_ID = getUserId();
+
   const profileRef = doc(db, 'users', USER_ID);
   const snapshot = await getDoc(profileRef);
 
@@ -29,6 +33,8 @@ export async function getProfileFromFirebase() {
 }
 
 export async function pauseProfileInFirebase() {
+  const USER_ID = getUserId();
+
   await setDoc(
     doc(db, 'users', USER_ID),
     {
@@ -40,6 +46,8 @@ export async function pauseProfileInFirebase() {
 }
 
 export async function activateProfileInFirebase() {
+  const USER_ID = getUserId();
+
   await setDoc(
     doc(db, 'users', USER_ID),
     {
@@ -51,5 +59,7 @@ export async function activateProfileInFirebase() {
 }
 
 export async function deleteProfileFromFirebase() {
+  const USER_ID = getUserId();
+
   await deleteDoc(doc(db, 'users', USER_ID));
 }

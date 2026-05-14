@@ -12,7 +12,7 @@ import { useNavigation } from '@react-navigation/native';
 import { collection, onSnapshot } from 'firebase/firestore';
 
 import { useAppState } from '../providers/AppProvider';
-import { db } from '../firebase/firebaseConfig';
+import { db, auth } from '../firebase/firebaseConfig';
 
 export default function DiscoverScreen() {
   const navigation = useNavigation();
@@ -22,6 +22,7 @@ export default function DiscoverScreen() {
   const [people, setPeople] = useState([]);
 
   const isAccommodationSeeker = profileDraft?.role === 'seeker';
+  const currentUserId = auth.currentUser?.uid || 'demoUser';
 
   useEffect(() => {
     const unsubscribeListings = onSnapshot(
@@ -47,7 +48,7 @@ export default function DiscoverScreen() {
     id: doc.id,
     ...doc.data(),
   }))
-  .filter((user) => user.id !== 'demoUser');
+  .filter((user) => user.id !== currentUserId);
 
         setPeople(loadedPeople);
       },
@@ -107,9 +108,15 @@ export default function DiscoverScreen() {
             style={styles.searchHousingButton}
             onPress={() => navigation.navigate('Map')}
           >
-            <Text style={styles.searchHousingText}>
-              🏠 Search housing by location
-            </Text>
+            <View style={styles.searchHousingContent}>
+  <Image
+    source={require('../../assets/logo.png')}
+    style={styles.searchHousingIcon}
+  />
+  <Text style={styles.searchHousingText}>
+    Search housing by location
+  </Text>
+</View>
           </Pressable>
         )}
 
@@ -197,7 +204,7 @@ const styles = StyleSheet.create({
   interestedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     paddingHorizontal: 24,
     marginBottom: 28,
   },
@@ -269,7 +276,7 @@ const styles = StyleSheet.create({
   },
 
   searchHousingButton: {
-    backgroundColor: '#F4C21A',
+    backgroundColor: '#f4b400',
     paddingVertical: 14,
     paddingHorizontal: 16,
     borderRadius: 16,
@@ -291,4 +298,16 @@ const styles = StyleSheet.create({
     color: '#777',
     fontSize: 16,
   },
+  searchHousingContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+},
+
+searchHousingIcon: {
+  width: 24,
+  height: 24,
+  resizeMode: 'contain',
+},
 });

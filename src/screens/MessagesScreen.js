@@ -20,7 +20,7 @@ import {
   deleteDoc,
 } from 'firebase/firestore';
 
-import { db } from '../firebase/firebaseConfig';
+import { db, auth } from '../firebase/firebaseConfig';
 import { useAppState } from '../providers/AppProvider';
 
 export default function MessagesScreen({ navigation }) {
@@ -28,6 +28,7 @@ export default function MessagesScreen({ navigation }) {
 
   const role = profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
+  const currentUserId = auth.currentUser?.uid || 'demoUser';
 
   const [firebaseConversations, setFirebaseConversations] = useState([]);
 
@@ -55,7 +56,7 @@ export default function MessagesScreen({ navigation }) {
 
   const conversations = firebaseConversations.map((item) => ({
     chatId: item.id,
-    id: item.participants?.find((p) => p !== 'demoUser') || item.id,
+    id: item.participants?.find((p) => p !== currentUserId) || item.id,
 
     name: item.otherName || 'Chat',
     avatar: item.otherAvatar || null,
@@ -186,23 +187,26 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     backgroundColor: '#FAF8F4',
     paddingHorizontal: 18,
-    paddingTop: 60,
+    paddingTop: 20,
     paddingBottom: 130,
   },
 
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 56,
-  },
+  height: 44,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 26,
+},
 
-  title: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#050505',
-  },
+title: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  textAlign: 'center',
+  fontSize: 24,
+  fontWeight: '700',
+  color: '#050505',
+},
 
   headerSpace: {
     width: 45,

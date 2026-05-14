@@ -10,12 +10,17 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { Modal } from 'react-native';
+import { BlurView } from 'expo-blur';
+import CustomButton from '../components/CustomButton';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
 
 import AppScreen from '../components/AppScreen';
 import { useAppState } from '../providers/AppProvider';
 import { saveProfileToFirebase, getProfileFromFirebase } from '../services/profileService';
+import { signOut } from 'firebase/auth';
+import { auth } from '../firebase/firebaseConfig';
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330';
@@ -23,8 +28,8 @@ const fallbackImage =
 const { width } = Dimensions.get('window');
 const IMAGE_WIDTH = width - 44;
 
-export default function ProfileScreen() {
-  const { profileDraft } = useAppState();
+export default function ProfileScreen({ navigation }) {
+  const { profileDraft, signOut: signOutApp } = useAppState();
   const isAccommodationSeeker = profileDraft?.role === 'seeker';
 
   const [isEditing, setIsEditing] = useState(false);
@@ -42,6 +47,7 @@ export default function ProfileScreen() {
   const [tenants, setTenants] = useState('0');
   const [bedroomCount, setBedroomCount] = useState('0');
   const [bathroomCount, setBathroomCount] = useState('0');
+  const [showPauseModal, setShowPauseModal] = useState(false);
 
   const [wifi, setWifi] = useState(false);
   const [furnished, setFurnished] = useState(false);
@@ -241,20 +247,35 @@ export default function ProfileScreen() {
     </>
   );
 
+
+   const handleLogout = async () => {
+  await signOut(auth);
+
+  signOutApp();
+
+  navigation.reset({
+    index: 0,
+    routes: [{ name: 'Welcome' }],
+  });
+};
+
   return (
     <AppScreen padded={false}>
       <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Image source={require('../../assets/icons/house.png')} style={styles.homeIcon} />
+          
           <Text style={styles.title}>Your Profile</Text>
-              <Text style={styles.roleText}>
-           {isAccommodationSeeker
-            ? 'Looking for a place'
-            : 'Need tenants / roommate'}
-            </Text>
-          <Pressable onPress={handleSave}>
-            <Text style={styles.edit}>{isEditing ? 'Save' : 'Edit'}</Text>
-          </Pressable>
+             
+          <Pressable onPress={handleSave} style={styles.editButton}>
+  {isEditing ? (
+    <Text style={styles.saveText}>Save</Text>
+  ) : (
+    <Image
+      source={require('../../assets/icons/edit.png')}
+      style={styles.editIcon}
+    />
+  )}
+</Pressable>
         </View>
 
         {savedMessage && (
@@ -339,7 +360,7 @@ export default function ProfileScreen() {
 
     <View style={styles.card}>
 
-          <Text style={styles.label}>Accommodation Type:</Text>
+          
 
 {isEditing ? (
   <View style={styles.tagsWrap}>
@@ -363,14 +384,20 @@ export default function ProfileScreen() {
     ))}
   </View>
 ) : (
-  <Text style={styles.value}>
-    {accommodationType.length > 0 ? accommodationType.join(', ') : 'Not added'}
-  </Text>
+  <View style={styles.row}>
+    <Text style={styles.label}>Accommodation Type:</Text>
+
+    <Text style={styles.value}>
+      {accommodationType.length > 0
+        ? accommodationType.join(', ')
+        : 'Not added'}
+    </Text>
+  </View>
 )}
 
 <View style={styles.divider} />
 
-<Text style={styles.label}>Room Type:</Text>
+
 
 {isEditing ? (
   <View style={styles.tagsWrap}>
@@ -394,9 +421,15 @@ export default function ProfileScreen() {
     ))}
   </View>
 ) : (
-  <Text style={styles.value}>
-    {roomType.length > 0 ? roomType.join(', ') : 'Not added'}
-  </Text>
+  <View style={styles.row}>
+    <Text style={styles.label}>Room Type:</Text>
+
+    <Text style={styles.value}>
+      {roomType.length > 0
+        ? roomType.join(', ')
+        : 'Not added'}
+    </Text>
+  </View>
 )}
 
 <View style={styles.divider} />
@@ -512,11 +545,39 @@ export default function ProfileScreen() {
 )}
 
         <View style={styles.accountBox}>
-          <Text style={styles.accountText}>Log Out</Text>
-          <Text style={styles.accountText}>Pause Account</Text>
+          <Pressable onPress={handleLogout}>
+  <Text style={styles.accountText}>Log Out</Text>
+</Pressable>
+          <Pressable onPress={() => setShowPauseModal(true)}>
+  <Text style={styles.accountText}>Pause Account</Text>
+</Pressable>
           <Text style={styles.deleteText}>Delete Account</Text>
         </View>
       </ScrollView>
+      <Modal transparent visible={showPauseModal} animationType="fade">
+  <BlurView intensity={45} tint="light" style={styles.pauseOverlay}>
+    <View style={styles.pauseCard}>
+      <Text style={styles.pauseTitle}>
+        Your account has been paused.
+      </Text>
+
+      <Image
+        source={require('../../assets/icons/pause-art.png')}
+        style={styles.pauseImage}
+        resizeMode="contain"
+      />
+
+      <CustomButton
+        title="Go Back"
+        onPress={() => {
+          setShowPauseModal(false);
+          navigation.navigate('Home');
+        }}
+        style={styles.pauseButton}
+      />
+    </View>
+  </BlurView>
+</Modal>
     </AppScreen>
   );
 }
@@ -524,33 +585,40 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 22,
-    paddingTop: 54,
+    paddingTop: 30,
     paddingBottom: 140,
     backgroundColor: '#FAF8F4',
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 24,
-  },
+header: {
+  height: 44,
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginBottom: 24,
+},
   homeIcon: {
     width: 24,
     height: 24,
     resizeMode: 'contain',
   },
-  title: {
-    flex: 1,
-    textAlign: 'center',
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#050505',
-  },
-  edit: {
-    width: 45,
-    textAlign: 'right',
-    fontSize: 16,
-    color: '#111',
-  },
+
+title: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  textAlign: 'center',
+  fontSize: 22,
+  fontWeight: '700',
+  color: '#050505',
+},
+
+edit: {
+  position: 'absolute',
+  right: 0,
+  fontSize: 20,
+  color: '#111',
+  fontWeight: '700',
+},
+
   savedBox: {
     alignSelf: 'center',
     backgroundColor: '#FFF1C7',
@@ -666,11 +734,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#222',
   },
-  value: {
-    fontSize: 16,
-    color: '#111',
-    textAlign: 'right',
-  },
+value: {
+  flex: 1,
+  fontSize: 16,
+  color: '#111',
+  textAlign: 'right',
+},
   smallInput: {
     width: 56,
     height: 34,
@@ -701,27 +770,31 @@ const styles = StyleSheet.create({
     gap: 12,
     marginTop: 14,
   },
-  tag: {
-    minWidth: 92,
-    minHeight: 36,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 15,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-  },
-  selectedTag: {
-    backgroundColor: '#FFF1C7',
-    borderColor: '#F2B705',
-  },
-  tagText: {
-    fontSize: 14,
-    color: '#111',
-    textTransform: 'capitalize',
-  },
+tag: {
+  minWidth: 96,
+  minHeight: 38,
+  paddingHorizontal: 14,
+  paddingVertical: 8,
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: 'rgba(43,43,43,0.18)',
+  alignItems: 'center',
+  justifyContent: 'center',
+  backgroundColor: '#FFFFFF',
+},
+
+selectedTag: {
+  backgroundColor: '#F4B400',
+  borderColor: '#F4B400',
+},
+
+ tagText: {
+  fontSize: 14,
+  color: '#111',
+  fontWeight: '600',
+  textAlign: 'center',
+  textTransform: 'capitalize',
+},
   emptyText: {
     fontSize: 14,
     color: '#777',
@@ -769,4 +842,67 @@ const styles = StyleSheet.create({
   fontSize: 12,
   color: '#777',
 },
+
+editButton: {
+  position: 'absolute',
+  right: 0,
+  justifyContent: 'center',
+  alignItems: 'center',
+},
+
+editIcon: {
+  width: 22,
+  height: 22,
+  resizeMode: 'contain',
+},
+
+saveText: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#111',
+},
+
+pauseOverlay: {
+  flex: 1,
+  alignItems: 'center',
+  justifyContent: 'center',
+  paddingHorizontal: 32,
+},
+
+pauseCard: {
+  width: '100%',
+  borderRadius: 28,
+  backgroundColor: 'rgba(255,255,255,0.86)',
+  paddingHorizontal: 28,
+  paddingTop: 42,
+  paddingBottom: 34,
+  alignItems: 'center',
+  shadowColor: '#000',
+  shadowOpacity: 0.16,
+  shadowRadius: 18,
+  shadowOffset: { width: 0, height: 8 },
+  elevation: 10,
+},
+
+pauseTitle: {
+  fontSize: 24,
+  fontWeight: '800',
+  color: '#111',
+  textAlign: 'center',
+  lineHeight: 31,
+  marginBottom: 24,
+  fontFamily: 'IBM Plex Sans JP',
+},
+
+pauseImage: {
+  width: 210,
+  height: 190,
+  marginBottom: 28,
+},
+
+pauseButton: {
+  height: 52,
+  width: '92%',
+},
+
 });

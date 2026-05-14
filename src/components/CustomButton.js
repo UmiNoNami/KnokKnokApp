@@ -1,14 +1,21 @@
 import React from 'react';
 import { Pressable, Text, StyleSheet } from 'react-native';
 
-export default function CustomButton({ title, onPress, style, textStyle }) {
+export default function CustomButton({
+  title,
+  onPress,
+  style,
+  textStyle,
+  disabled = false,
+}) {
   return (
     <Pressable
+      disabled={disabled}
       onPress={onPress}
       style={({ pressed, hovered }) => [
         styles.button,
-        hovered && styles.buttonHover,
-        pressed && styles.buttonPressed,
+        (pressed || hovered) && !disabled && styles.buttonActive,
+        disabled && styles.buttonDisabled,
         style,
       ]}
     >
@@ -16,7 +23,8 @@ export default function CustomButton({ title, onPress, style, textStyle }) {
         <Text
           style={[
             styles.buttonText,
-            (pressed || hovered) && styles.buttonTextActive,
+            (pressed || hovered) && !disabled && styles.buttonTextActive,
+            disabled && styles.buttonTextDisabled,
             textStyle,
           ]}
         >
@@ -30,33 +38,37 @@ export default function CustomButton({ title, onPress, style, textStyle }) {
 const styles = StyleSheet.create({
   button: {
     width: '100%',
-    height: 64,
-    borderRadius: 22,
-    borderWidth: 1.2,
-    borderColor: '#1A1A1A',
-    backgroundColor: '#F3F3F3',
+    height: 56,
+    borderRadius: 28,
+    borderWidth: 1,
+    borderColor: 'rgba(43,43,43,0.28)',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 4,
-    elevation: 4,
   },
-  buttonHover: {
-    backgroundColor: '#B8B8B8',
+
+  buttonActive: {
+    backgroundColor: '#2B2B2B',
+    borderColor: '#2B2B2B',
+    transform: [{ scale: 0.985 }],
   },
-  buttonPressed: {
-    backgroundColor: '#8E8E8E',
-    transform: [{ scale: 0.98 }],
+
+  buttonDisabled: {
+    opacity: 1,
   },
+
   buttonText: {
-    fontSize: 18,
+    fontSize: 15,
     color: '#111',
-    fontWeight: '500',
-    letterSpacing: 0.3,
+    fontWeight: '700',
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   buttonTextActive: {
     color: '#FFFFFF',
+  },
+
+  buttonTextDisabled: {
+    color: '#111',
   },
 });

@@ -6,7 +6,7 @@ import { colors } from '../theme/colors';
 
 export default function AppScreen({ children, padded = true }) {
   return (
-    <LinearGradient colors={['#F7F1E8', '#FFF8F1', '#F3E7D8']} style={styles.background}>
+    <LinearGradient colors={['#FFFFFF', '#FFFFFF']} style={styles.background}>
       <SafeAreaView edges={['top']} style={styles.safeArea}>
         <View style={[styles.shell, padded && styles.padded]}>{children}</View>
       </SafeAreaView>
@@ -23,7 +23,7 @@ const styles = StyleSheet.create({
   },
   shell: {
     flex: 1,
-    backgroundColor: colors.panel,
+    backgroundColor: 'transparent',
   },
   padded: {
     marginHorizontal: 18,

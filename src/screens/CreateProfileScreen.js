@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { saveProfileToFirebase } from '../services/profileService';
 import {
   Alert,
+  Dimensions,
   Image,
   Pressable,
   ScrollView,
@@ -16,15 +17,19 @@ import * as ImagePicker from 'expo-image-picker';
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 
+const { width } = Dimensions.get('window');
+const PHOTO_GAP = 14;
+const PHOTO_SIZE = (width - 64 - PHOTO_GAP) / 2;
+
 export default function CreateProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
-  const { updateProfile } = useAppState();
   const [photos, setPhotos] = useState([]);
-  
+
+  const { updateProfile } = useAppState();
 
   const pickImage = async () => {
-    if (photos.length >= 6) {
-      Alert.alert('Limit reached', 'Users can upload up to 6 photos.');
+    if (photos.length >= 4) {
+      Alert.alert('Limit reached', 'You can upload up to 4 photos.');
       return;
     }
 
@@ -40,11 +45,11 @@ export default function CreateProfileScreen({ navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-  mediaTypes: ImagePicker.MediaTypeOptions.Images,
-  allowsEditing: true,
-  aspect: [4, 4],
-  quality: 1,
-});
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
 
     if (!result.canceled) {
       const selectedUri = result.assets[0].uri;
@@ -52,18 +57,65 @@ export default function CreateProfileScreen({ navigation }) {
     }
   };
 
+  const replaceImage = async (index) => {
+    const permissionResult =
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (!permissionResult.granted) {
+      Alert.alert(
+        'Permission needed',
+        'Please allow access to your photo library.'
+      );
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 1,
+    });
+
+    if (!result.canceled) {
+      const selectedUri = result.assets[0].uri;
+
+      setPhotos((prev) =>
+        prev.map((photo, photoIndex) =>
+          photoIndex === index ? selectedUri : photo
+        )
+      );
+    }
+  };
+
+  const deleteImage = (index) => {
+    setPhotos((prev) => prev.filter((_, photoIndex) => photoIndex !== index));
+  };
+
   const renderPhotoBox = (index) => {
     const photo = photos[index];
+    const isNextAddBox = index === photos.length && photos.length < 4;
 
     if (photo) {
       return (
-        <Pressable key={index} style={styles.photoBox} onPress={pickImage}>
-          <Image source={{ uri: photo }} style={styles.photoImage} />
-        </Pressable>
+        <View key={index} style={[styles.photoBox, styles.photoBoxFilled]}>
+          <Pressable
+            style={styles.photoPressArea}
+            onPress={() => replaceImage(index)}
+          >
+            <Image source={{ uri: photo }} style={styles.photoImage} />
+          </Pressable>
+
+          <Pressable
+            style={styles.deletePhotoButton}
+            onPress={() => deleteImage(index)}
+          >
+            <Text style={styles.deletePhotoText}>×</Text>
+          </Pressable>
+        </View>
       );
     }
 
-    if (index === 0) {
+    if (isNextAddBox) {
       return (
         <Pressable key={index} style={styles.photoBox} onPress={pickImage}>
           <Text style={styles.plus}>＋</Text>
@@ -71,49 +123,10 @@ export default function CreateProfileScreen({ navigation }) {
       );
     }
 
-    return <View key={index} style={styles.photoBox} />;
+    return <View key={index} style={[styles.photoBox, styles.emptyPhotoBox]} />;
   };
 
-  return (
-    <AppScreen>
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View style={styles.container}>
-          <View>
-            <Text style={styles.title}>Create a profile</Text>
-
-            <Text style={styles.sectionTitle}>Your bio:</Text>
-            <Text style={styles.sectionSubtitle}>
-              Make a great first impression
-            </Text>
-
-            <TextInput
-              style={styles.bioInput}
-              placeholder="This is a space that you write about yourself or your accomodation"
-              placeholderTextColor="#9A9A9A"
-              multiline
-              textAlignVertical="top"
-              value={bio}
-              onChangeText={setBio}
-            />
-
-            <Text style={styles.sectionTitle}>Add photos</Text>
-            <Text style={styles.sectionSubtitle}>
-              Upload a few clear photos of yourself or your space
-            </Text>
-
-            <View style={styles.photoGrid}>
-              {[0, 1, 2, 3, 4, 5].map((index) => renderPhotoBox(index))}
-            </View>
-          </View>
-
-          <View style={styles.buttonWrapper}>
-               <CustomButton
-  title="Finish"
-  onPress={async () => {
+  const handleFinish = async () => {
     const profileData = {
       bio,
       photos,
@@ -123,10 +136,52 @@ export default function CreateProfileScreen({ navigation }) {
 
     await saveProfileToFirebase(profileData);
 
-    navigation.navigate('Main');
-  }}
-/>
+    navigation.replace('AccountReady');
+  };
+
+  return (
+    <AppScreen padded={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Create a profile</Text>
+
+        <Text style={styles.sectionTitle}>Your bio</Text>
+        <Text style={styles.sectionSubtitle}>
+          Make a great first impression
+        </Text>
+
+        <TextInput
+          style={styles.bioInput}
+          placeholder="Write a little about yourself or your accommodation"
+          placeholderTextColor="#9A9A9A"
+          multiline
+          textAlignVertical="top"
+          value={bio}
+          onChangeText={setBio}
+        />
+
+        <Text style={styles.sectionTitle}>Add photos</Text>
+        <Text style={styles.sectionSubtitle}>
+          Upload up to 4 clear photos of yourself or your space
+        </Text>
+
+        <View style={styles.photoGrid}>
+          {[0, 1, 2, 3].map((index) => renderPhotoBox(index))}
+        </View>
+
+        <View style={styles.bottomContent}>
+          <View style={styles.carouselDots}>
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+            <View style={styles.dot} />
+            <View style={[styles.dot, styles.activeDot]} />
           </View>
+
+          <CustomButton title="Finish" onPress={handleFinish} />
         </View>
       </ScrollView>
     </AppScreen>
@@ -134,80 +189,146 @@ export default function CreateProfileScreen({ navigation }) {
 }
 
 const styles = StyleSheet.create({
-  scrollContent: {
-    flexGrow: 1,
-    paddingBottom: 30,
-  },
   container: {
     flex: 1,
-    backgroundColor: '#F4F4F4',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
-    paddingBottom: 20,
-    justifyContent: 'space-between',
   },
+
+  scrollContent: {
+    paddingBottom: 70,
+  },
+
   title: {
     fontSize: 24,
     fontWeight: '800',
     color: '#111',
+    marginTop: 20,
     marginBottom: 42,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#111',
     marginBottom: 8,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   sectionSubtitle: {
     fontSize: 16,
     color: '#3A3A3A',
     lineHeight: 23,
-    marginBottom: 24,
-    maxWidth: 320,
+    marginBottom: 22,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   bioInput: {
     width: '100%',
-    minHeight: 152,
+    minHeight: 146,
     borderRadius: 24,
     borderWidth: 1,
-    borderColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
+    borderColor: 'rgba(43,43,43,0.28)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 12,
     fontSize: 16,
     color: '#111',
-    marginBottom: 40,
+    marginBottom: 34,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   photoGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
-    rowGap: 12,
+    gap: PHOTO_GAP,
+    marginTop: 2,
   },
+
   photoBox: {
-    width: '47%',
-    aspectRatio: 1,
-    borderRadius: 14,
-    backgroundColor: '#E3E1DE',
+    width: PHOTO_SIZE,
+    height: PHOTO_SIZE,
+    borderRadius: 18,
+    borderWidth: 1.4,
+    borderColor: '#2B2B2B',
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
+
+  photoBoxFilled: {
+    borderColor: '#F4B400',
+  },
+
+  emptyPhotoBox: {
+    opacity: 0.28,
+  },
+
+  photoPressArea: {
+    width: '100%',
+    height: '100%',
+  },
+
   photoImage: {
     width: '100%',
     height: '100%',
     resizeMode: 'cover',
   },
+
   plus: {
-    fontSize: 64,
-    color: '#8A8A8A',
-    lineHeight: 70,
-    fontWeight: '300',
+    fontSize: 30,
+    color: '#F4B400',
+    lineHeight: 34,
+    fontWeight: '700',
+    textAlign: 'center',
   },
-  buttonWrapper: {
-    width: '100%',
-    marginTop: 40,
+
+  deletePhotoButton: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#2B2B2B',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  deletePhotoText: {
+    fontSize: 20,
+    lineHeight: 22,
+    fontWeight: '700',
+    color: '#2B2B2B',
+  },
+
+  bottomContent: {
+    marginTop: 38,
     marginBottom: 24,
+  },
+
+  carouselDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 18,
+  },
+
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(43,43,43,0.18)',
+  },
+
+  activeDot: {
+    width: 22,
+    backgroundColor: '#2B2B2B',
   },
 });

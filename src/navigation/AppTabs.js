@@ -97,39 +97,61 @@ function TabIcon({ icon, focused, color, label }) {
 
 const styles = StyleSheet.create({
   tabBar: {
-    height: 86,
+    position: 'absolute',
+    left: 24,
+    right: 24,
+    bottom: 28,
+    height: 66,
+    borderRadius: 34,
     borderTopWidth: 1,
-    borderTopColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
+    borderWidth: 1,
+    borderColor: 'rgb(255, 255, 255)',
+    backgroundColor: 'rgba(233, 233, 233, 0.32)',
+    overflow: 'hidden',
     paddingTop: 8,
-    paddingBottom: 10,
+    paddingBottom: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+shadowRadius: 12,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
   },
+
   tabBarLabel: {
     display: 'none',
   },
+
   iconWrap: {
     alignItems: 'center',
     justifyContent: 'center',
   },
+
   iconPill: {
-    minWidth: 72,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    width: 64,
+    height: 44,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  activeIconPill: {
-    backgroundColor: '#F4C21A',
-  },
+
+activeIconPill: {
+  backgroundColor: 'rgba(244, 179, 0, 0.66)',
+  borderWidth: 1,
+  borderColor: 'rgba(255, 255, 255, 0.75)',
+  shadowColor: '#F4B400',
+  shadowOpacity: 0.18,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 4,
+},
+
   icon: {
-    width: 24,
-    height: 24,
+    width: 28,
+    height: 28,
     resizeMode: 'contain',
-    marginBottom: 2,
   },
+
   iconLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+    display: 'none',
   },
 });

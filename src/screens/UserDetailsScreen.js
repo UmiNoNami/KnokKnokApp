@@ -1,105 +1,154 @@
 import React, { useMemo, useState } from 'react';
 import { saveProfileToFirebase } from '../services/profileService';
 import {
+  Alert,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
+  Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableWithoutFeedback,
   View,
-  ScrollView,
 } from 'react-native';
+
 import { useAppState } from '../providers/AppProvider';
-import DropDownPicker from 'react-native-dropdown-picker';
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 
 export default function UserDetailsScreen({ navigation }) {
   const { updateProfile, profileDraft } = useAppState();
+
   const [name, setName] = useState(profileDraft.name || '');
   const [job, setJob] = useState(profileDraft.job || '');
 
-  const [dayOpen, setDayOpen] = useState(false);
   const [dayValue, setDayValue] = useState(null);
-
-  const [monthOpen, setMonthOpen] = useState(false);
   const [monthValue, setMonthValue] = useState(null);
-
-  const [yearOpen, setYearOpen] = useState(false);
   const [yearValue, setYearValue] = useState(null);
-
-  const [genderOpen, setGenderOpen] = useState(false);
   const [genderValue, setGenderValue] = useState(null);
 
+  const [pickerType, setPickerType] = useState(null);
+
   const dayItems = useMemo(
-    () =>
-      Array.from({ length: 31 }, (_, i) => ({
-        label: String(i + 1),
-        value: String(i + 1),
-      })),
+    () => Array.from({ length: 31 }, (_, i) => String(i + 1)),
     []
   );
 
   const monthItems = useMemo(
-    () => [
-      { label: 'Jan', value: 'Jan' },
-      { label: 'Feb', value: 'Feb' },
-      { label: 'Mar', value: 'Mar' },
-      { label: 'Apr', value: 'Apr' },
-      { label: 'May', value: 'May' },
-      { label: 'Jun', value: 'Jun' },
-      { label: 'Jul', value: 'Jul' },
-      { label: 'Aug', value: 'Aug' },
-      { label: 'Sep', value: 'Sep' },
-      { label: 'Oct', value: 'Oct' },
-      { label: 'Nov', value: 'Nov' },
-      { label: 'Dec', value: 'Dec' },
-    ],
+    () => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
     []
   );
 
   const yearItems = useMemo(() => {
     const currentYear = new Date().getFullYear();
-    return Array.from({ length: 80 }, (_, i) => ({
-      label: String(currentYear - i),
-      value: String(currentYear - i),
-    }));
+    return Array.from({ length: 80 }, (_, i) => String(currentYear - i));
   }, []);
 
   const genderItems = useMemo(
-    () => [
-      { label: 'Female', value: 'Female' },
-      { label: 'Male', value: 'Male' },
-      { label: 'Non-binary', value: 'Non-binary' },
-      { label: 'Prefer not to say', value: 'Prefer not to say' },
-    ],
+    () => ['Female', 'Male', 'Non-binary', 'Prefer not to say'],
     []
   );
 
-  const closeAllDropdowns = () => {
-    setDayOpen(false);
-    setMonthOpen(false);
-    setYearOpen(false);
-    setGenderOpen(false);
-    Keyboard.dismiss();
+  const getPickerData = () => {
+    if (pickerType === 'day') return dayItems;
+    if (pickerType === 'month') return monthItems;
+    if (pickerType === 'year') return yearItems;
+    if (pickerType === 'gender') return genderItems;
+    return [];
   };
 
+  const getPickerTitle = () => {
+    if (pickerType === 'day') return 'Choose day';
+    if (pickerType === 'month') return 'Choose month';
+    if (pickerType === 'year') return 'Choose year';
+    if (pickerType === 'gender') return 'Choose gender';
+    return '';
+  };
+
+  const setPickerValue = (value) => {
+    if (pickerType === 'day') setDayValue(value);
+    if (pickerType === 'month') setMonthValue(value);
+    if (pickerType === 'year') setYearValue(value);
+    if (pickerType === 'gender') setGenderValue(value);
+
+    setPickerType(null);
+  };
+
+  const getSelectedValue = () => {
+    if (pickerType === 'day') return dayValue;
+    if (pickerType === 'month') return monthValue;
+    if (pickerType === 'year') return yearValue;
+    if (pickerType === 'gender') return genderValue;
+    return null;
+  };
+
+  const handleNext = async () => {
+    if (!name.trim()) {
+      Alert.alert('Missing name', 'Please enter your name.');
+      return;
+    }
+
+    const dateOfBirth = `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`;
+
+    updateProfile({
+      name,
+      job,
+      gender: genderValue,
+      dateOfBirth,
+    });
+
+    await saveProfileToFirebase({
+      name,
+      job,
+      gender: genderValue,
+      dateOfBirth,
+    });
+
+    navigation.navigate('LookingFor');
+  };
+
+  const PickerField = ({ label, value, placeholder, onPress, style }) => (
+    <Pressable
+      style={({ pressed }) => [
+        styles.pickerField,
+        pressed && styles.fieldPressed,
+        style,
+      ]}
+      onPress={onPress}
+    >
+      <Text
+        style={[
+          styles.pickerText,
+          !value && styles.placeholderText,
+        ]}
+        numberOfLines={1}
+      >
+        {value || placeholder}
+      </Text>
+
+      <Text style={styles.chevron}>⌄</Text>
+    </Pressable>
+  );
+
   return (
-    <AppScreen>
+    <AppScreen padded={false}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <TouchableWithoutFeedback onPress={closeAllDropdowns}>
-          <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
-          >
-            <View style={styles.container}>
-              <View style={styles.topSection}>
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.container}>
+            <ScrollView
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+              contentContainerStyle={styles.scrollContent}
+            >
+              <View style={styles.topContent}>
                 <Text style={styles.title}>Let’s get you started</Text>
+
                 <Text style={styles.subtitle}>
                   Fill in your details to create your account.
                 </Text>
@@ -112,129 +161,113 @@ export default function UserDetailsScreen({ navigation }) {
                   value={name}
                   onChangeText={setName}
                 />
+
                 <Text style={styles.label}>What do you do?</Text>
                 <TextInput
-                 style={styles.input}
+                  style={styles.input}
                   placeholder="Example: Waitress, Student, Designer"
                   placeholderTextColor="#A8A29E"
-                   value={job}
-                    onChangeText={setJob}
-                      />
+                  value={job}
+                  onChangeText={setJob}
+                />
 
                 <Text style={styles.label}>Date of Birth</Text>
+
                 <View style={styles.dateRow}>
-                  <View style={[styles.dropdownSmallWrap, { zIndex: 3000 }]}>
-                    <DropDownPicker
-                      open={dayOpen}
-                      value={dayValue}
-                      items={dayItems}
-                      setOpen={(open) => {
-                        setMonthOpen(false);
-                        setYearOpen(false);
-                        setGenderOpen(false);
-                        setDayOpen(open);
-                      }}
-                      setValue={setDayValue}
-                      placeholder="Day"
-                      listMode="SCROLLVIEW"
-                      style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      textStyle={styles.dropdownText}
-                      placeholderStyle={styles.placeholderText}
-                    />
-                  </View>
+                  <PickerField
+                    value={dayValue}
+                    placeholder="Day"
+                    onPress={() => setPickerType('day')}
+                    style={styles.dateField}
+                  />
 
-                  <View style={[styles.dropdownSmallWrap, { zIndex: 2000 }]}>
-                    <DropDownPicker
-                      open={monthOpen}
-                      value={monthValue}
-                      items={monthItems}
-                      setOpen={(open) => {
-                        setDayOpen(false);
-                        setYearOpen(false);
-                        setGenderOpen(false);
-                        setMonthOpen(open);
-                      }}
-                      setValue={setMonthValue}
-                      placeholder="Month"
-                      listMode="SCROLLVIEW"
-                      style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      textStyle={styles.dropdownText}
-                      placeholderStyle={styles.placeholderText}
-                    />
-                  </View>
+                  <PickerField
+                    value={monthValue}
+                    placeholder="Month"
+                    onPress={() => setPickerType('month')}
+                    style={styles.dateField}
+                  />
 
-                  <View style={[styles.dropdownSmallWrap, { zIndex: 1000 }]}>
-                    <DropDownPicker
-                      open={yearOpen}
-                      value={yearValue}
-                      items={yearItems}
-                      setOpen={(open) => {
-                        setDayOpen(false);
-                        setMonthOpen(false);
-                        setGenderOpen(false);
-                        setYearOpen(open);
-                      }}
-                      setValue={setYearValue}
-                      placeholder="Year"
-                      listMode="SCROLLVIEW"
-                      style={styles.dropdown}
-                      dropDownContainerStyle={styles.dropdownContainer}
-                      textStyle={styles.dropdownText}
-                      placeholderStyle={styles.placeholderText}
-                    />
-                  </View>
+                  <PickerField
+                    value={yearValue}
+                    placeholder="Year"
+                    onPress={() => setPickerType('year')}
+                    style={styles.dateField}
+                  />
                 </View>
 
                 <Text style={styles.label}>Gender</Text>
-                <View style={[styles.dropdownGenderWrap, { zIndex: 500 }]}>
-                  <DropDownPicker
-                    open={genderOpen}
-                    value={genderValue}
-                    items={genderItems}
-                    setOpen={(open) => {
-                      setDayOpen(false);
-                      setMonthOpen(false);
-                      setYearOpen(false);
-                      setGenderOpen(open);
-                    }}
-                    setValue={setGenderValue}
-                    placeholder="Select"
-                    listMode="SCROLLVIEW"
-                    style={styles.dropdown}
-                    dropDownContainerStyle={styles.dropdownContainer}
-                    textStyle={styles.dropdownText}
-                    placeholderStyle={styles.placeholderText}
-                  />
-                </View>
+
+                <PickerField
+                  value={genderValue}
+                  placeholder="Select"
+                  onPress={() => setPickerType('gender')}
+                  style={styles.genderField}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={styles.bottomContent}>
+              <View style={styles.carouselDots}>
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+                <View style={styles.dot} />
+                <View style={[styles.dot, styles.activeDot]} />
               </View>
 
-              <View style={styles.buttonWrapper}>
-       <CustomButton
-title="Next"
-onPress={async () => {
-  updateProfile({
-    name,
-    job,
-    gender: genderValue,
-    dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
-  });
-
-  await saveProfileToFirebase({
-    name,
-    job,
-    gender: genderValue,
-    dateOfBirth: `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`,
-  });
-
-  navigation.navigate('LookingFor');
-}}
-/>
-</View>
+              <CustomButton title="Next" onPress={handleNext} />
             </View>
-          </ScrollView>
+          </View>
         </TouchableWithoutFeedback>
+
+        <Modal
+          transparent
+          visible={Boolean(pickerType)}
+          animationType="fade"
+          onRequestClose={() => setPickerType(null)}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={() => setPickerType(null)}
+          >
+            <View style={styles.sheet}>
+              <Text style={styles.sheetTitle}>{getPickerTitle()}</Text>
+
+              <ScrollView
+                showsVerticalScrollIndicator={false}
+                style={styles.sheetList}
+              >
+                {getPickerData().map((item) => {
+                  const selected = getSelectedValue() === item;
+
+                  return (
+                    <Pressable
+                      key={item}
+                      style={[
+                        styles.sheetOption,
+                        selected && styles.selectedOption,
+                      ]}
+                      onPress={() => setPickerValue(item)}
+                    >
+                      <Text
+                        style={[
+                          styles.sheetOptionText,
+                          selected && styles.selectedOptionText,
+                        ]}
+                      >
+                        {item}
+                      </Text>
+
+                      {selected && (
+                        <Text style={styles.selectedCheck}>✓</Text>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            </View>
+          </Pressable>
+        </Modal>
       </KeyboardAvoidingView>
     </AppScreen>
   );
@@ -244,86 +277,192 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
-  scrollContent: {
-    flexGrow: 1,
-  },
+
   container: {
     flex: 1,
-    backgroundColor: '#F4F4F4',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
     paddingBottom: 40,
-    justifyContent: 'space-between',
   },
-  topSection: {
+
+  scrollContent: {
+    paddingBottom: 20,
+  },
+
+  topContent: {
     flex: 1,
   },
+
   title: {
     fontSize: 24,
     fontWeight: '800',
     color: '#2A2A2A',
     marginBottom: 14,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   subtitle: {
     fontSize: 16,
     color: '#2F2F2F',
-    lineHeight: 24,
-    marginBottom: 48,
+    lineHeight: 26,
+    marginBottom: 36,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   label: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#111',
-    marginBottom: 14,
-    marginTop: 10,
+    color: '#2A2A2A',
+    marginBottom: 12,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   input: {
     width: '100%',
     height: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
+    borderColor: 'rgba(43,43,43,0.28)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#111',
-    marginBottom: 28,
+    marginBottom: 24,
+    fontFamily: 'IBM Plex Sans JP',
   },
+
   dateRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  dropdownSmallWrap: {
-    width: '32.5%',
-  },
-  dropdownGenderWrap: {
-    width: '55%',
-  },
-  dropdown: {
-    minHeight: 50,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
-  },
-  dropdownContainer: {
-    borderWidth: 1,
-    borderColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
-    borderRadius: 16,
-  },
-  dropdownText: {
-    fontSize: 16,
-    color: '#111',
-  },
-  placeholderText: {
-    color: '#555',
-    fontSize: 14.5,
-  },
-  buttonWrapper: {
-    width: '100%',
-    marginTop: 40,
+    gap: 10,
     marginBottom: 24,
+  },
+
+  dateField: {
+    flex: 1,
+  },
+
+  genderField: {
+    width: '100%',
+  },
+
+  pickerField: {
+    height: 58,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(43,43,43,0.28)',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+
+  fieldPressed: {
+    backgroundColor: '#F6F6F6',
+  },
+
+  pickerText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111',
+    fontFamily: 'IBM Plex Sans JP',
+  },
+
+  placeholderText: {
+    color: '#777',
+    fontWeight: '500',
+  },
+
+  chevron: {
+    fontSize: 18,
+    color: '#555',
+    marginLeft: 6,
+    marginTop: -10,
+  },
+
+  bottomContent: {
+    marginTop: 12,
+    marginBottom: 24,
+  },
+
+  carouselDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginBottom: 18,
+  },
+
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(43,43,43,0.18)',
+  },
+
+  activeDot: {
+    width: 22,
+    backgroundColor: '#2B2B2B',
+  },
+
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.18)',
+    justifyContent: 'flex-end',
+  },
+
+  sheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 22,
+    paddingBottom: 36,
+    maxHeight: '70%',
+  },
+
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111',
+    marginBottom: 16,
+    fontFamily: 'IBM Plex Sans JP',
+  },
+
+  sheetList: {
+    maxHeight: 420,
+  },
+
+  sheetOption: {
+    minHeight: 56,
+    borderRadius: 18,
+    paddingHorizontal: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+    backgroundColor: '#F8F8F8',
+  },
+
+  selectedOption: {
+    backgroundColor: '#EFEFEF',
+  },
+
+  sheetOptionText: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#111',
+    fontFamily: 'IBM Plex Sans JP',
+  },
+
+  selectedOptionText: {
+    color: '#000',
+  },
+
+  selectedCheck: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#2B2B2B',
   },
 });

@@ -30,14 +30,14 @@ import {
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 import AppScreen from '../components/AppScreen';
-import { db, storage } from '../firebase/firebaseConfig';
+import { db, storage, auth } from '../firebase/firebaseConfig';
 
 export default function ChatScreen({ navigation, route }) {
   const { conversation = {} } = route.params || {};
 
   const scrollViewRef = useRef(null);
 
-  const currentUserId = 'demoUser';
+  const currentUserId = auth.current
   const otherUserId = conversation.id || 'unknownUser';
 
   const chatId =

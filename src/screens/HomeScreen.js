@@ -24,7 +24,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-import { db } from '../firebase/firebaseConfig';
+import { db, auth } from '../firebase/firebaseConfig';
 import { useAppState } from '../providers/AppProvider';
 
 const { width } = Dimensions.get('window');
@@ -37,6 +37,7 @@ export default function HomeScreen() {
 
   const role = profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
+  const currentUserId = auth.currentUser?.uid || 'demoUser';
 
   const [firebaseListings, setFirebaseListings] = useState([]);
   const [firebaseUsers, setFirebaseUsers] = useState([]);
@@ -80,7 +81,7 @@ export default function HomeScreen() {
             id: doc.id,
             ...doc.data(),
           }))
-          .filter((user) => user.role === 'seeker' && user.id !== 'demoUser');
+          .filter((user) => user.role === 'seeker' && user.id !== currentUserId);
 
         await Promise.all(
           loadedUsers.map((user) => {
@@ -165,7 +166,7 @@ export default function HomeScreen() {
 
     try {
       await addDoc(collection(db, 'swipes'), {
-        userId: 'demoUser',
+        userId: currentUserId,
         targetId: currentItem.id,
         targetType: isAccommodationSeeker ? 'listing' : 'user',
         direction: direction === 1 ? 'like' : 'dislike',
@@ -300,12 +301,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <Pressable style={styles.smallIconButton}>
-            <Image
-              source={require('../../assets/icons/house.png')}
-              style={styles.smallIcon}
-            />
-          </Pressable>
+          <View style={styles.headerSpace} />
 
           <Text style={styles.headerTitle}>
             {isAccommodationSeeker ? 'For you' : 'For you'}
@@ -375,20 +371,20 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F4F4F1',
+    backgroundColor: '#fdfdfdf9',
   },
 
   container: {
     flex: 1,
     paddingHorizontal: 14,
     paddingTop: 6,
-    backgroundColor: '#F4F4F1',
+    backgroundColor: '#Ffff',
   },
 
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     marginTop: 4,
     marginBottom: 18,
     paddingHorizontal: 4,
@@ -420,6 +416,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8F8F6',
     alignItems: 'center',
     justifyContent: 'center',
+    position: 'absolute',
+    right: 0,
   },
 
   refreshIcon: {
@@ -432,12 +430,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4F4F1',
     borderRadius: 28,
     borderWidth: 1,
-    borderColor: '#DDD8D1',
+    borderColor: 'rgba(43,43,43,0.12)',
     padding: 10,
   },
 
   cardStack: {
-    height: 410,
+    height: 480,
   },
 
   cardPosition: {
@@ -457,15 +455,17 @@ const styles = StyleSheet.create({
     opacity: 1,
   },
 
-  card: {
-    borderRadius: 22,
-    overflow: 'hidden',
-    backgroundColor: '#fff',
-  },
+ card: {
+  borderRadius: 22,
+  overflow: 'hidden',
+  backgroundColor: '#fff',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.75)',
+},
 
   roomImage: {
     width: CARD_WIDTH - 20,
-    height: 410,
+    height: 480,
     resizeMode: 'cover',
   },
 
