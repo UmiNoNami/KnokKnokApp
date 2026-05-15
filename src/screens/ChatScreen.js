@@ -11,6 +11,7 @@ import {
   TextInput,
   View,
   Alert,
+  TouchableOpacity,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 
@@ -37,7 +38,7 @@ export default function ChatScreen({ navigation, route }) {
 
   const scrollViewRef = useRef(null);
 
-  const currentUserId = auth.current
+  const currentUserId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
   const otherUserId = conversation.id || 'unknownUser';
 
   const chatId =
@@ -115,7 +116,14 @@ export default function ChatScreen({ navigation, route }) {
   };
 
   const sendMessage = async () => {
+     Alert.alert('Test', 'Send function is running');
     const trimmed = text.trim();
+    console.log('ANDROID SEND TEST:', {
+  trimmed,
+  currentUserId,
+  otherUserId,
+  chatId,
+});
 
     if (!trimmed) return;
 
@@ -142,8 +150,9 @@ export default function ChatScreen({ navigation, route }) {
         setEditingMessageId(null);
         return;
       } catch (error) {
-        console.log('Edit message error:', error);
-      }
+  console.log('Send message error:', error);
+  Alert.alert('Send failed', error.message);
+}
     }
 
     try {
@@ -244,9 +253,10 @@ export default function ChatScreen({ navigation, route }) {
   return (
     <AppScreen padded={false}>
       <KeyboardAvoidingView
-        style={styles.screen}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+  style={styles.screen}
+  behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+>
         <View style={styles.inner}>
           <View style={styles.header}>
             <Pressable onPress={() => navigation.goBack()}>
@@ -346,15 +356,20 @@ export default function ChatScreen({ navigation, route }) {
                 style={styles.input}
                 returnKeyType={editingMessageId ? 'done' : 'send'}
                 onSubmitEditing={sendMessage}
-                onBlur={Keyboard.dismiss}
+blurOnSubmit={false}
+                
               />
             </View>
 
-            <Pressable style={styles.sendButton} onPress={sendMessage}>
-              <Text style={styles.sendText}>
-                {editingMessageId ? 'Save' : 'Send'}
-              </Text>
-            </Pressable>
+           <TouchableOpacity
+  activeOpacity={0.75}
+  style={styles.sendButton}
+  onPress={sendMessage}
+>
+  <Text style={styles.sendText}>
+    {editingMessageId ? 'Save' : 'Send'}
+  </Text>
+</TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
@@ -403,10 +418,10 @@ const styles = StyleSheet.create({
   },
 
   chatContent: {
-    paddingHorizontal: 14,
-    paddingTop: 40,
-    paddingBottom: 30,
-  },
+  paddingHorizontal: 14,
+  paddingTop: 40,
+  paddingBottom: Platform.OS === 'android' ? 150 : 120,
+},
 
   leftRow: {
     flexDirection: 'row',
@@ -477,16 +492,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F2B705',
   },
-
-  inputBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 18,
-    paddingBottom: 34,
-    paddingTop: 10,
-    gap: 10,
-    backgroundColor: '#FAF8F4',
-  },
+inputBar: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingHorizontal: 18,
+  paddingBottom: Platform.OS === 'android' ? 18 : 34,
+  paddingTop: 10,
+  gap: 10,
+  backgroundColor: '#FAF8F4',
+},
 
   plusButton: {
     width: 54,
@@ -521,13 +535,16 @@ const styles = StyleSheet.create({
   },
 
   sendButton: {
-    height: 54,
-    paddingHorizontal: 16,
-    borderRadius: 27,
-    backgroundColor: '#F2B705',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
+  minWidth: 74,
+  height: 54,
+  paddingHorizontal: 16,
+  borderRadius: 27,
+  backgroundColor: '#F2B705',
+  alignItems: 'center',
+  justifyContent: 'center',
+  zIndex: 999,
+  elevation: 20,
+},
 
   sendText: {
     fontSize: 14,

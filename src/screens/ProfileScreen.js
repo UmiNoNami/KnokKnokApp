@@ -16,6 +16,7 @@ import CustomButton from '../components/CustomButton';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
 
+
 import AppScreen from '../components/AppScreen';
 import { useAppState } from '../providers/AppProvider';
 import { saveProfileToFirebase, getProfileFromFirebase } from '../services/profileService';
@@ -485,14 +486,18 @@ export default function ProfileScreen({ navigation }) {
           )}
         </View>
         
-{isAccommodationSeeker && (
+
   <>
-    <Text style={styles.sectionTitle}>Budget</Text>
+    <Text style={styles.sectionTitle}>
+  {isAccommodationSeeker ? 'Budget' : 'Rent Price'}
+</Text>
 
     <View style={styles.card}>
       {isEditing ? (
         <>
-          <Text style={styles.label}>Price Range</Text>
+          <Text style={styles.label}>
+  {isAccommodationSeeker ? 'Budget:' : 'Rent Price:'}
+</Text>
 
           <Slider
             style={styles.slider}
@@ -542,7 +547,7 @@ export default function ProfileScreen({ navigation }) {
       )}
     </View>
   </>
-)}
+
 
         <View style={styles.accountBox}>
           <Pressable onPress={handleLogout}>

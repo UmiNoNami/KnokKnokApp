@@ -12,6 +12,7 @@ import { BlurView } from 'expo-blur';
 import AppScreen from '../components/AppScreen';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase/firebaseConfig';
+import { Platform } from 'react-native';
 
 export default function ListingDetailsScreen({ navigation, route }) {
   const { item } = route.params;
@@ -52,7 +53,7 @@ export default function ListingDetailsScreen({ navigation, route }) {
   const goToChat = async () => {
     closeMatchModal();
 
-    const currentUserId = auth.currentUser?.uid || 'demoUser';
+    const currentUserId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
     const otherUserId = `match_${item.id}`;
     const chatId = [currentUserId, otherUserId].sort().join('_');
 

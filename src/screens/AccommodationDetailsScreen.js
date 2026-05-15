@@ -48,7 +48,7 @@ export default function AccommodationDetailsScreen({ navigation }) {
   const [location, setLocation] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
 
-  const { updateProfile } = useAppState();
+  const { updateProfile, profileDraft } = useAppState();
   const scrollRef = useRef(null);
 
   const suggestions = useMemo(() => {
@@ -169,7 +169,8 @@ export default function AccommodationDetailsScreen({ navigation }) {
     <AppScreen padded={false}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
@@ -291,7 +292,11 @@ export default function AccommodationDetailsScreen({ navigation }) {
               </View>
 
               <View style={styles.priceCard}>
-                <Text style={styles.rowLabel}>Price Range</Text>
+                <Text style={styles.rowLabel}>
+  {profileDraft?.role === 'seeker'
+    ? 'Your Budget'
+    : 'Rent Price'}
+</Text>
 
                 <Slider
                   style={styles.slider}
@@ -378,13 +383,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  container: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 32,
-    paddingTop: 70,
-    paddingBottom: 40,
-  },
+ container: {
+  flex: 1,
+  backgroundColor: '#FFFFFF',
+  paddingHorizontal: 32,
+  paddingTop: 70,
+  paddingBottom: 0,
+},
 
   topContent: {
   flex: 1,
@@ -393,7 +398,7 @@ const styles = StyleSheet.create({
 },
 
   scrollContent: {
-  paddingBottom: 40,
+  paddingBottom: Platform.OS === 'android' ? 160 : 70,
 },
 
   title: {
@@ -570,13 +575,14 @@ const styles = StyleSheet.create({
   },
 
   suggestionsBox: {
-    marginTop: 12,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: 'rgba(43,43,43,0.12)',
-    backgroundColor: '#FFFFFF',
-    overflow: 'hidden',
-  },
+  marginTop: 12,
+  marginBottom: 24,
+  borderRadius: 18,
+  borderWidth: 1,
+  borderColor: 'rgba(43,43,43,0.12)',
+  backgroundColor: '#FFFFFF',
+  overflow: 'hidden',
+},
 
   suggestionItem: {
     paddingVertical: 14,

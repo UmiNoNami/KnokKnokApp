@@ -1,7 +1,18 @@
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/firebaseConfig';
+import { Platform } from 'react-native';
 
-const getUserId = () => auth.currentUser?.uid || 'demoUser';
+const getUserId = () => {
+  return auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+
+
+
+  if (!userId) {
+    throw new Error('No logged-in user found');
+  }
+
+  return userId;
+};
 
 export async function saveProfileToFirebase(profileData) {
   const USER_ID = getUserId();
