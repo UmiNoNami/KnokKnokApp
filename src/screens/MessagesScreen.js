@@ -7,6 +7,7 @@ import {
   Text,
   View,
   Alert,
+  Platform,
 } from 'react-native';
 
 import AppScreen from '../components/AppScreen';
@@ -18,6 +19,7 @@ import {
   query,
   doc,
   deleteDoc,
+  getDoc,
 } from 'firebase/firestore';
 
 import { db, auth } from '../firebase/firebaseConfig';
@@ -28,38 +30,78 @@ export default function MessagesScreen({ navigation }) {
 
   const role = profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
-  const currentUserId = auth.currentUser?.uid || 'demoUser';
+  const currentUserId =
+  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
 
   const [firebaseConversations, setFirebaseConversations] = useState([]);
 
   useEffect(() => {
-    const chatsRef = collection(db, 'chats');
-    const q = query(chatsRef, orderBy('updatedAt', 'desc'));
+  const chatsRef = collection(db, 'chats');
+  const q = query(chatsRef, orderBy('updatedAt', 'desc'));
 
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const loadedChats = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+  const unsubscribe = onSnapshot(
+    q,
+    async (snapshot) => {
+      const loadedChats = await Promise.all(
+        snapshot.docs.map(async (chatDoc) => {
+          const chatData = {
+            id: chatDoc.id,
+            ...chatDoc.data(),
+          };
 
-        setFirebaseConversations(loadedChats);
-      },
-      (error) => {
-        console.log('Messages load error:', error);
-      }
-    );
+          const participants = chatData.participants || [];
 
-    return unsubscribe;
-  }, []);
+          if (!participants.includes(currentUserId)) {
+            return null;
+          }
+
+          const otherUserId = participants.find(
+            (id) => id !== currentUserId
+          );
+
+          let otherUser = null;
+
+          if (otherUserId) {
+            const userSnap = await getDoc(doc(db, 'users', otherUserId));
+
+            if (userSnap.exists()) {
+              otherUser = userSnap.data();
+            }
+          }
+
+          return {
+            ...chatData,
+            otherUserId,
+            otherName:
+              otherUser?.name ||
+              chatData.otherName ||
+              'Chat',
+            otherAvatar:
+              otherUser?.profilePhoto ||
+              otherUser?.photos?.[0] ||
+              otherUser?.avatar ||
+              chatData.otherAvatar ||
+              null,
+          };
+        })
+      );
+
+      setFirebaseConversations(loadedChats.filter(Boolean));
+    },
+    (error) => {
+      console.log('Messages load error:', error);
+    }
+  );
+
+  return unsubscribe;
+}, [currentUserId]);
 
   const conversations = firebaseConversations.map((item) => ({
     chatId: item.id,
     id: item.participants?.find((p) => p !== currentUserId) || item.id,
 
     name: item.otherName || 'Chat',
-    avatar: item.otherAvatar || null,
+avatar: item.otherAvatar || null,
 
     listingTitle: item.listingTitle || item.propertyTitle || '',
     listingImage: item.listingImage || item.houseImage || null,

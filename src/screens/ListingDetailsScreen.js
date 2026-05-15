@@ -15,17 +15,25 @@ import { db, auth } from '../firebase/firebaseConfig';
 import { Platform } from 'react-native';
 
 export default function ListingDetailsScreen({ navigation, route }) {
-  const { item } = route.params;
+  const { item, type } = route.params;
 
-  const isAccommodation = item?.price !== undefined || item?.houseImages;
+const isAccommodation = type === 'listing';
 
   const mainImage = isAccommodation
-    ? item.houseImages?.[0]
-      ? { uri: item.houseImages[0] }
+  ? item.houseImages?.[0]
+    ? { uri: item.houseImages[0] }
+    : item.imageUrl
+      ? { uri: item.imageUrl }
       : require('../../assets/rooms/room1.jpg')
+  : item.photos?.[0]
+    ? { uri: item.photos[0] }
     : item.profilePhoto
       ? { uri: item.profilePhoto }
-      : require('../../assets/rooms/room1.jpg');
+      : item.profilePhotos?.[0]
+        ? { uri: item.profilePhotos[0] }
+        : item.avatar
+          ? { uri: item.avatar }
+          : require('../../assets/rooms/room1.jpg');
 
   const hostAvatar =
     item.hostAvatar
@@ -53,8 +61,15 @@ export default function ListingDetailsScreen({ navigation, route }) {
   const goToChat = async () => {
     closeMatchModal();
 
-    const currentUserId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
-    const otherUserId = `match_${item.id}`;
+    const currentUserId =
+  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+
+if (!currentUserId) {
+  return null;
+}
+    const otherUserId = isAccommodation
+  ? item.ownerId || item.userId || item.hostId || item.id
+  : item.id;
     const chatId = [currentUserId, otherUserId].sort().join('_');
 
     const otherName = isAccommodation
@@ -62,8 +77,12 @@ export default function ListingDetailsScreen({ navigation, route }) {
       : item.name || 'Profile';
 
     const otherAvatar = isAccommodation
-      ? item.hostAvatar || null
-      : item.profilePhoto || null;
+  ? item.hostAvatar || item.ownerAvatar || null
+  : item.photos?.[0] ||
+    item.profilePhoto ||
+    item.profilePhotos?.[0] ||
+    item.avatar ||
+    null;
 
     const listingTitle = isAccommodation
       ? item.title || 'Listing'
@@ -307,7 +326,7 @@ export default function ListingDetailsScreen({ navigation, route }) {
               <View style={styles.row}>
                 <Text style={styles.label}>Occupation:</Text>
                 <Text style={styles.value}>
-                  {item.occupation || 'Not added'}
+                  {item.job || item.occupation || 'Not added'}
                 </Text>
               </View>
 
@@ -316,7 +335,7 @@ export default function ListingDetailsScreen({ navigation, route }) {
               <Text style={styles.label}>Lifestyle Preferences:</Text>
 
               <View style={styles.tagsWrap}>
-                {tags.map((tag) => (
+                {(item.lifestyle || tags).map((tag) => (
                   <View key={tag} style={styles.tag}>
                     <Text style={styles.tagText}>{tag}</Text>
                   </View>

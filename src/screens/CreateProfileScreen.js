@@ -1,4 +1,7 @@
 import React, { useState } from 'react';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { storage, auth, db } from '../firebase/firebaseConfig';
 import { saveProfileToFirebase } from '../services/profileService';
 import {
   Alert,
@@ -10,6 +13,7 @@ import {
   Text,
   TextInput,
   View,
+  Platform,
 } from 'react-native';
 import { useAppState } from '../providers/AppProvider';
 import * as ImagePicker from 'expo-image-picker';
@@ -25,7 +29,21 @@ export default function CreateProfileScreen({ navigation }) {
   const [bio, setBio] = useState('');
   const [photos, setPhotos] = useState([]);
 
-  const { updateProfile } = useAppState();
+  const { updateProfile, profileDraft } = useAppState();
+
+  const uploadProfileImageAsync = async (uri) => {
+  const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  const fileName = `profileImages/${userId}_${Date.now()}.jpg`;
+  const imageRef = ref(storage, fileName);
+
+  await uploadBytes(imageRef, blob);
+
+  return await getDownloadURL(imageRef);
+};
 
   const pickImage = async () => {
     if (photos.length >= 4) {
@@ -50,11 +68,13 @@ export default function CreateProfileScreen({ navigation }) {
       aspect: [1, 1],
       quality: 1,
     });
+if (!result.canceled) {
+  const selectedUri = result.assets[0].uri;
 
-    if (!result.canceled) {
-      const selectedUri = result.assets[0].uri;
-      setPhotos((prev) => [...prev, selectedUri]);
-    }
+  const uploadedUrl = await uploadProfileImageAsync(selectedUri);
+
+  setPhotos((prev) => [...prev, uploadedUrl]);
+}
   };
 
   const replaceImage = async (index) => {
@@ -79,11 +99,13 @@ export default function CreateProfileScreen({ navigation }) {
     if (!result.canceled) {
       const selectedUri = result.assets[0].uri;
 
-      setPhotos((prev) =>
-        prev.map((photo, photoIndex) =>
-          photoIndex === index ? selectedUri : photo
-        )
-      );
+const uploadedUrl = await uploadProfileImageAsync(selectedUri);
+
+setPhotos((prev) =>
+  prev.map((photo, photoIndex) =>
+    photoIndex === index ? uploadedUrl : photo
+  )
+);
     }
   };
 
@@ -127,17 +149,65 @@ export default function CreateProfileScreen({ navigation }) {
   };
 
   const handleFinish = async () => {
+  const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const isProvider = profileDraft?.role === 'provider';
+
+  if (isProvider) {
     const profileData = {
       bio,
-      photos,
+      profilePhoto: '',
+      photos: [],
+    };
+
+    const listingData = {
+      ownerId: userId,
+      hostName: profileDraft?.name || '',
+      hostAvatar: '',
+      title: profileDraft?.accommodationType?.[0] || 'Accommodation',
+      description: bio,
+      houseImages: photos,
+      imageUrl: photos?.[0] || '',
+      area: profileDraft?.location || '',
+      location: profileDraft?.location || '',
+      price: profileDraft?.price || 200,
+      billsIncluded: profileDraft?.billsIncluded ?? true,
+      accommodationType: profileDraft?.accommodationType || [],
+      roomType: profileDraft?.roomType || [],
+      tenants: profileDraft?.tenants || 0,
+      bedroomCount: profileDraft?.bedroomCount || 0,
+      bathroomCount: profileDraft?.bathroomCount || 0,
+      wifi: profileDraft?.wifi || false,
+      furnished: profileDraft?.furnished || false,
+      livingRoom: profileDraft?.livingRoom || false,
+      gardenBalcony: profileDraft?.gardenBalcony || false,
+      lifestyle: profileDraft?.lifestyle || [],
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
     };
 
     updateProfile(profileData);
 
     await saveProfileToFirebase(profileData);
 
-    navigation.replace('AccountReady');
-  };
+    await setDoc(
+      doc(db, 'listings', `${userId}_listing`),
+      listingData,
+      { merge: true }
+    );
+  } else {
+    const profileData = {
+      bio,
+      photos,
+      profilePhoto: photos?.[0] || '',
+    };
+
+    updateProfile(profileData);
+
+    await saveProfileToFirebase(profileData);
+  }
+
+  navigation.replace('AccountReady');
+};
 
   return (
     <AppScreen padded={false}>

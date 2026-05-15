@@ -15,13 +15,15 @@ import { BlurView } from 'expo-blur';
 import CustomButton from '../components/CustomButton';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
+import { doc, getDoc } from 'firebase/firestore';
+import { Platform } from 'react-native';
 
 
 import AppScreen from '../components/AppScreen';
 import { useAppState } from '../providers/AppProvider';
 import { saveProfileToFirebase, getProfileFromFirebase } from '../services/profileService';
 import { signOut } from 'firebase/auth';
-import { auth } from '../firebase/firebaseConfig';
+import { auth, db } from '../firebase/firebaseConfig';
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330';
@@ -31,7 +33,8 @@ const IMAGE_WIDTH = width - 44;
 
 export default function ProfileScreen({ navigation }) {
   const { profileDraft, signOut: signOutApp } = useAppState();
-  const isAccommodationSeeker = profileDraft?.role === 'seeker';
+  const isAccommodationSeeker =
+  profileDraft?.role === 'seeker' || profileDraft?.role === undefined;
 
   const [isEditing, setIsEditing] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
@@ -63,21 +66,20 @@ export default function ProfileScreen({ navigation }) {
   const [activePhotoIndex, setActivePhotoIndex] = useState(0);
 
   const cleanPhotos = (data) => {
-    const possiblePhotos =
-      data?.photos ||
-      data?.profilePhotos ||
-      data?.profileImages ||
-      data?.images ||
-      [];
+  const possiblePhotos = [
+    ...(Array.isArray(data?.photos) ? data.photos : []),
+    ...(Array.isArray(data?.profilePhotos) ? data.profilePhotos : []),
+    ...(Array.isArray(data?.profileImages) ? data.profileImages : []),
+    ...(Array.isArray(data?.images) ? data.images : []),
+    ...(Array.isArray(data?.houseImages) ? data.houseImages : []),
+    data?.profilePhoto,
+    data?.imageUrl,
+  ];
 
-      
-
-    if (!Array.isArray(possiblePhotos)) return [];
-
-    return possiblePhotos.filter(
-      (photo) => typeof photo === 'string' && photo.trim() !== ''
-    );
-  };
+  return [...new Set(possiblePhotos)].filter(
+  (photo) => typeof photo === 'string' && photo.trim() !== ''
+);
+};
 
   const cleanTags = (data) => {
     const possibleTags = data?.lifestyle || [];
@@ -116,12 +118,31 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     const loadProfile = async () => {
       const firebaseData = await getProfileFromFirebase();
+const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
 
-      if (firebaseData) {
-        applyProfileData(firebaseData);
-      } else {
-        applyProfileData(profileDraft);
-      }
+let finalData = firebaseData || profileDraft;
+
+if (finalData?.role === 'provider') {
+  const listingSnap = await getDoc(
+    doc(db, 'listings', `${userId}_listing`)
+  );
+
+  if (listingSnap.exists()) {
+    const listingData = listingSnap.data();
+
+    finalData = {
+      ...finalData,
+      photos:
+        listingData.houseImages?.length > 0
+          ? listingData.houseImages
+          : listingData.imageUrl
+            ? [listingData.imageUrl]
+            : finalData.photos || [],
+    };
+  }
+}
+
+applyProfileData(finalData);
     };
 
     loadProfile();

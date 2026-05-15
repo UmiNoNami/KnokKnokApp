@@ -10,6 +10,7 @@ import {
 import { useAppState } from '../providers/AppProvider';
 import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
+import { saveProfileToFirebase } from '../services/profileService';
 
 export default function LookingForScreen({ navigation }) {
   const [selectedOption, setSelectedOption] = useState(null);
@@ -48,7 +49,7 @@ export default function LookingForScreen({ navigation }) {
     );
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (!selectedOption) return;
 
     const role =
@@ -57,7 +58,10 @@ export default function LookingForScreen({ navigation }) {
         : 'provider';
 
     updateProfile({ role });
-    navigation.navigate('AccommodationType');
+
+await saveProfileToFirebase({ role });
+
+navigation.navigate('AccommodationType');
   };
 
   return (

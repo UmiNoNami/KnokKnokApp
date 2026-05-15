@@ -14,6 +14,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,6 +23,13 @@ import {
   onSnapshot,
   addDoc,
   serverTimestamp,
+  query,
+  where,
+  getDocs,
+  doc,
+  setDoc,
+  getDoc,
+  limit,
 } from 'firebase/firestore';
 
 import { db, auth } from '../firebase/firebaseConfig';
@@ -31,91 +39,124 @@ const { width } = Dimensions.get('window');
 const CARD_WIDTH = width - 30;
 const SWIPE_LIMIT = width * 0.28;
 
+
 export default function HomeScreen() {
   const navigation = useNavigation();
   const { profileDraft } = useAppState();
+  const [firebaseRole, setFirebaseRole] = useState(null);
 
-  const role = profileDraft?.role || 'seeker';
+  const role = firebaseRole || profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
-  const currentUserId = auth.currentUser?.uid || 'demoUser';
+  const currentUserId =
+  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
 
   const [firebaseListings, setFirebaseListings] = useState([]);
   const [firebaseUsers, setFirebaseUsers] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
 
   const position = useRef(new Animated.ValueXY()).current;
+  
+  useEffect(() => {
+  const loadMyRole = async () => {
+    try {
+      const userSnap = await getDoc(doc(db, 'users', currentUserId));
+
+      if (userSnap.exists()) {
+        setFirebaseRole(userSnap.data()?.role || 'seeker');
+      }
+    } catch (error) {
+      console.log('Role load error:', error);
+    }
+  };
+
+  loadMyRole();
+}, [currentUserId]);
+  
 
   useEffect(() => {
-    const unsubscribeListings = onSnapshot(
-      collection(db, 'listings'),
-      async (snapshot) => {
-        const loadedListings = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+  const unsubscribeListings = onSnapshot(
+    collection(db, 'listings'),
+    async (snapshot) => {
+      const loadedListings = snapshot.docs.map((listingDoc) => ({
+        id: listingDoc.id,
+        ...listingDoc.data(),
+      }));
 
-        await Promise.all(
-          loadedListings.map((item) => {
-            const imageUrl = item.houseImages?.[0] || item.imageUrl;
+      await Promise.all(
+        loadedListings.map((item) => {
+          const imageUrl = item.houseImages?.[0] || item.imageUrl;
 
-            if (imageUrl) {
-              return Image.prefetch(imageUrl);
-            }
+          if (imageUrl) {
+            return Image.prefetch(imageUrl);
+          }
 
-            return Promise.resolve();
-          })
-        );
+          return Promise.resolve();
+        })
+      );
 
-        setFirebaseListings(loadedListings);
-      },
-      (error) => {
-        console.log('Listings load error:', error);
-      }
+      setFirebaseListings(loadedListings);
+    },
+    (error) => {
+      console.log('Listings load error:', error);
+    }
+  );
+
+  const seekerUsersQuery = query(
+  collection(db, 'users'),
+  where('role', '==', 'seeker'),
+  limit(20)
+);
+
+const unsubscribeUsers = onSnapshot(
+  seekerUsersQuery,
+  async (snapshot) => {
+    const loadedUsers = snapshot.docs.map((userDoc) => ({
+      ...userDoc.data(),
+      id: userDoc.id,
+    }));
+
+    const filteredUsers = loadedUsers.filter(
+      (user) => user.id !== currentUserId
     );
 
-    const unsubscribeUsers = onSnapshot(
-      collection(db, 'users'),
-      async (snapshot) => {
-        const loadedUsers = snapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((user) => user.role === 'seeker' && user.id !== currentUserId);
+    setFirebaseUsers(filteredUsers);
+  },
+  (error) => {
+    console.log('Users load error:', error);
+  }
+);
 
-        await Promise.all(
-          loadedUsers.map((user) => {
-            const imageUrl = user.profilePhoto || user.avatar;
+  return () => {
+    unsubscribeListings();
+    unsubscribeUsers();
+  };
+}, [currentUserId]);
 
-            if (imageUrl) {
-              return Image.prefetch(imageUrl);
-            }
-
-            return Promise.resolve();
-          })
-        );
-
-        setFirebaseUsers(loadedUsers);
-      },
-      (error) => {
-        console.log('Users load error:', error);
-      }
+const feedData = useMemo(() => {
+  if (isAccommodationSeeker) {
+    return firebaseListings.filter(
+      (listing) => listing.ownerId !== currentUserId
     );
+  }
 
-    return () => {
-      unsubscribeListings();
-      unsubscribeUsers();
-    };
-  }, []);
+  return firebaseUsers;
+}, [
+  isAccommodationSeeker,
+  firebaseListings,
+  firebaseUsers,
+  currentUserId,
+]);
 
-  const feedData = useMemo(() => {
-    return isAccommodationSeeker ? firebaseListings : firebaseUsers;
-  }, [isAccommodationSeeker, firebaseListings, firebaseUsers]);
-
-  useEffect(() => {
+useEffect(() => {
+  if (currentIndex >= feedData.length) {
     setCurrentIndex(0);
-    position.setValue({ x: 0, y: 0 });
-  }, [isAccommodationSeeker, position]);
+  }
+}, [feedData.length, currentIndex]);
+
+useEffect(() => {
+  setCurrentIndex(0);
+  position.setValue({ x: 0, y: 0 });
+}, [isAccommodationSeeker, feedData.length, currentUserId]);
 
   const currentItem = feedData[currentIndex];
   const nextItem =
@@ -150,32 +191,101 @@ export default function HomeScreen() {
   };
 
   const getCardImage = (item) => {
-    if (isAccommodationSeeker) {
-      if (item?.houseImages?.[0]) return { uri: item.houseImages[0] };
-      if (item?.imageUrl) return { uri: item.imageUrl };
-    } else {
-      if (item?.profilePhoto) return { uri: item.profilePhoto };
-      if (item?.avatar) return { uri: item.avatar };
-    }
+  if (isAccommodationSeeker) {
+    if (item?.houseImages?.[0]) return { uri: item.houseImages[0] };
+    if (item?.imageUrl) return { uri: item.imageUrl };
+  } else {
+    if (item?.photos?.[0]) return { uri: item.photos[0] };
+    if (item?.profilePhoto) return { uri: item.profilePhoto };
+    if (item?.profilePhotos?.[0]) return { uri: item.profilePhotos[0] };
+    if (item?.avatar) return { uri: item.avatar };
+  }
 
-    return require('../../assets/rooms/room1.jpg');
-  };
+  return require('../../assets/rooms/room1.jpg');
+};
 
   const saveSwipeToFirebase = async (direction) => {
-    if (!currentItem) return;
+  if (!currentItem) return;
 
-    try {
-      await addDoc(collection(db, 'swipes'), {
-        userId: currentUserId,
-        targetId: currentItem.id,
-        targetType: isAccommodationSeeker ? 'listing' : 'user',
-        direction: direction === 1 ? 'like' : 'dislike',
-        createdAt: serverTimestamp(),
-      });
-    } catch (error) {
-      console.log('Swipe save error:', error);
+
+  const currentUserRole = role;
+const targetUserRole = isAccommodationSeeker ? 'provider' : currentItem.role;
+
+if (currentUserRole === targetUserRole) {
+  console.log('Blocked same-role match/chat');
+  return;
+}
+
+  const targetId = isAccommodationSeeker
+    ? currentItem.ownerId || currentItem.userId || currentItem.id
+    : currentItem.id;
+
+  const targetType = isAccommodationSeeker ? 'listing' : 'user';
+  const isLike = direction === 1;
+
+  try {
+    await addDoc(collection(db, 'swipes'), {
+      fromUserId: currentUserId,
+      toUserId: targetId,
+      targetId: currentItem.id,
+      targetType,
+      direction: isLike ? 'like' : 'dislike',
+      createdAt: serverTimestamp(),
+    });
+
+    if (!isLike) return;
+
+    const reverseSwipeQuery = query(
+      collection(db, 'swipes'),
+      where('fromUserId', '==', targetId),
+      where('toUserId', '==', currentUserId),
+      where('direction', '==', 'like')
+    );
+
+    const reverseSwipeSnapshot = await getDocs(reverseSwipeQuery);
+
+    if (!reverseSwipeSnapshot.empty) {
+      const matchId = [currentUserId, targetId].sort().join('_');
+
+      await setDoc(
+        doc(db, 'matches', matchId),
+        {
+          id: matchId,
+          users: [currentUserId, targetId],
+          createdAt: serverTimestamp(),
+          listingId: isAccommodationSeeker ? currentItem.id : null,
+          listingTitle: currentItem.title || '',
+          listingImage:
+            currentItem.houseImages?.[0] ||
+            currentItem.imageUrl ||
+            null,
+        },
+        { merge: true }
+      );
+
+      await setDoc(
+        doc(db, 'chats', matchId),
+        {
+          id: matchId,
+          participants: [currentUserId, targetId],
+          listingId: isAccommodationSeeker ? currentItem.id : null,
+          listingTitle: currentItem.title || '',
+          listingImage:
+            currentItem.houseImages?.[0] ||
+            currentItem.imageUrl ||
+            null,
+          matchMessage: 'You matched! Say hi 👋',
+          lastMessage: '',
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
     }
-  };
+  } catch (error) {
+    console.log('Swipe/match save error:', error);
+  }
+};
 
   const goNextCard = useCallback(() => {
     setCurrentIndex((prev) => {
@@ -208,8 +318,10 @@ export default function HomeScreen() {
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gesture) =>
-          Math.abs(gesture.dx) > 10,
+        onStartShouldSetPanResponder: () => false,
+
+onMoveShouldSetPanResponder: (_, gesture) =>
+  Math.abs(gesture.dx) > 15 || Math.abs(gesture.dy) > 15,
 
         onPanResponderMove: (_, gesture) => {
           position.setValue({ x: gesture.dx, y: gesture.dy });
@@ -232,11 +344,16 @@ export default function HomeScreen() {
     [position, swipeCard]
   );
 
-  const renderCard = (item) => (
-    <Pressable
-      style={styles.card}
-      onPress={() => navigation.navigate('ListingDetails', { item })}
-    >
+ const renderCard = (item) => (
+  <Pressable
+    style={styles.card}
+    onPress={() =>
+      navigation.navigate('ListingDetails', {
+        item,
+        type: isAccommodationSeeker ? 'listing' : 'user',
+      })
+    }
+  >
       <Image source={getCardImage(item)} style={styles.roomImage} />
 
       <Animated.View
@@ -254,48 +371,49 @@ export default function HomeScreen() {
           { opacity: dislikeOpacity },
         ]}
       />
+<View style={styles.imageTextOverlay}>
+  <Text style={styles.cardTitle}>
+    {isAccommodationSeeker
+      ? item.title || item.accommodationType?.[0] || 'Accommodation'
+      : item.name || 'Profile'}
+  </Text>
 
-      <View style={styles.imageTextOverlay}>
-        <Text style={styles.cardTitle}>
-          {isAccommodationSeeker
-            ? item.title || 'Listing'
-            : item.name || 'Profile'}
-        </Text>
+  <Text style={styles.cardLocation}>
+    {isAccommodationSeeker
+      ? item.area || item.location || 'Location not added'
+      : item.job || item.occupation || 'Job not added'}
+  </Text>
 
-        <Text style={styles.cardLocation}>
-          {isAccommodationSeeker
-            ? item.area || item.location || 'Location not added'
-            : `${item.age || ''}${item.age ? ', ' : ''}${
-                item.occupation || 'Seeker'
-              }`}
-        </Text>
+  {isAccommodationSeeker && (
+    <Text style={styles.cardPrice}>
+      {item.price ? `€${item.price}/week` : 'Rent not added'}
+    </Text>
+  )}
 
-        {isAccommodationSeeker && item.price && (
-          <Text style={styles.cardPrice}>€{item.price}/week</Text>
-        )}
-
-        {!isAccommodationSeeker && item.bio && (
-          <Text style={styles.cardPrice} numberOfLines={1}>
-            {item.bio}
-          </Text>
-        )}
-      </View>
+  {!isAccommodationSeeker && (
+    <Text style={styles.cardPrice} numberOfLines={1}>
+      {item.bio || 'No bio added yet'}
+    </Text>
+  )}
+</View>
     </Pressable>
   );
 
-  if (!currentItem) {
-    return (
-      <SafeAreaView style={styles.safeArea}>
-        <View style={styles.emptyContainer}>
-          <Text style={styles.emptyText}>
-            {isAccommodationSeeker
-              ? 'Loading listings...'
-              : 'Loading people...'}
-          </Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
+ if (!currentItem) {
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyText}>
+          {`role: ${role}
+currentUserId: ${currentUserId}
+listings: ${firebaseListings.length}
+users: ${firebaseUsers.length}
+feed: ${feedData.length}`}
+        </Text>
+      </View>
+    </SafeAreaView>
+  );
+}
 
   return (
     <SafeAreaView style={styles.safeArea}>

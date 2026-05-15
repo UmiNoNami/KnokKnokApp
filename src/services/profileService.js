@@ -4,15 +4,8 @@ import { Platform } from 'react-native';
 
 const getUserId = () => {
   return auth.currentUser?.uid || `demoUser_${Platform.OS}`;
-
-
-
-  if (!userId) {
-    throw new Error('No logged-in user found');
-  }
-
-  return userId;
 };
+
 
 export async function saveProfileToFirebase(profileData) {
   const USER_ID = getUserId();
@@ -22,6 +15,8 @@ export async function saveProfileToFirebase(profileData) {
     {
       ...profileData,
       id: USER_ID,
+      ownerId: USER_ID,
+      isActive: true,
       occupation: profileData.job || profileData.occupation || '',
       profilePhoto: profileData.photos?.[0] || '',
       updatedAt: new Date().toISOString(),
@@ -29,7 +24,6 @@ export async function saveProfileToFirebase(profileData) {
     { merge: true }
   );
 }
-
 export async function getProfileFromFirebase() {
   const USER_ID = getUserId();
 

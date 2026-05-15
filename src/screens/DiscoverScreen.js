@@ -6,6 +6,7 @@ import {
   StyleSheet,
   Text,
   View,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -22,7 +23,8 @@ export default function DiscoverScreen() {
   const [people, setPeople] = useState([]);
 
   const isAccommodationSeeker = profileDraft?.role === 'seeker';
-  const currentUserId = auth.currentUser?.uid || 'demoUser';
+ const currentUserId =
+  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
 
   useEffect(() => {
     const unsubscribeListings = onSnapshot(

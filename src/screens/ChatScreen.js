@@ -26,6 +26,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  getDoc,
 } from 'firebase/firestore';
 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -38,8 +39,9 @@ export default function ChatScreen({ navigation, route }) {
 
   const scrollViewRef = useRef(null);
 
-  const currentUserId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
-  const otherUserId = conversation.id || 'unknownUser';
+  const currentUserId = `demoUser_${Platform.OS}`;
+
+ const otherUserId = conversation.id || 'unknownUser';
 
   const chatId =
     conversation.chatId || [currentUserId, otherUserId].sort().join('_');
@@ -47,6 +49,9 @@ export default function ChatScreen({ navigation, route }) {
   const [text, setText] = useState('');
   const [messages, setMessages] = useState([]);
   const [editingMessageId, setEditingMessageId] = useState(null);
+
+  const [currentUserRole, setCurrentUserRole] = useState(null);
+const [otherUserRole, setOtherUserRole] = useState(null);
 
   useEffect(() => {
     const messagesRef = collection(db, 'chats', chatId, 'messages');
@@ -115,9 +120,53 @@ export default function ChatScreen({ navigation, route }) {
     ]);
   };
 
+
+  useEffect(() => {
+  const loadRoles = async () => {
+    try {
+      const currentSnap = await getDoc(doc(db, 'users', currentUserId));
+      const otherSnap = await getDoc(doc(db, 'users', otherUserId));
+
+      if (currentSnap.exists()) {
+        setCurrentUserRole(currentSnap.data()?.role || null);
+      }
+
+      if (otherSnap.exists()) {
+        setOtherUserRole(otherSnap.data()?.role || null);
+      }
+    } catch (error) {
+      console.log('Chat role load error:', error);
+    }
+  };
+
+  loadRoles();
+}, [currentUserId, otherUserId]);
+
   const sendMessage = async () => {
-     Alert.alert('Test', 'Send function is running');
     const trimmed = text.trim();
+    if (
+  currentUserRole &&
+  otherUserRole &&
+  currentUserRole === otherUserRole
+) {
+  Alert.alert(
+    'Chat blocked',
+    'Users with the same role cannot message each other.'
+  );
+  return;
+}
+
+    if (
+  conversation.currentUserRole &&
+  conversation.otherUserRole &&
+  conversation.currentUserRole === conversation.otherUserRole
+) {
+  Alert.alert(
+    'Chat blocked',
+    'Users with the same role cannot message each other.'
+  );
+  return;
+}
     console.log('ANDROID SEND TEST:', {
   trimmed,
   currentUserId,
