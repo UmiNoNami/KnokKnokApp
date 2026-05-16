@@ -69,6 +69,13 @@ export default function MessagesScreen({ navigation }) {
             }
           }
 
+          if (
+  otherUser &&
+  otherUser.role === role
+) {
+  return null;
+}
+
           return {
             ...chatData,
             otherUserId,

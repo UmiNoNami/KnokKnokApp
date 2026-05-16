@@ -245,7 +245,7 @@ if (currentUserRole === targetUserRole) {
     const reverseSwipeSnapshot = await getDocs(reverseSwipeQuery);
 
     if (!reverseSwipeSnapshot.empty) {
-      const matchId = [currentUserId, targetId].sort().join('_');
+      const matchId = `${currentUserId}_${targetId}_${Date.now()}`;
 
       await setDoc(
         doc(db, 'matches', matchId),
