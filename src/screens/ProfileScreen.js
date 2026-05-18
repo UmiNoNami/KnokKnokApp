@@ -15,15 +15,14 @@ import { BlurView } from 'expo-blur';
 import CustomButton from '../components/CustomButton';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
-import { doc, getDoc } from 'firebase/firestore';
-import { Platform } from 'react-native';
+import { doc, getDoc, setDoc, serverTimestamp, } from 'firebase/firestore';
+import { db, auth } from '../firebase/firebaseConfig';
 
 
 import AppScreen from '../components/AppScreen';
 import { useAppState } from '../providers/AppProvider';
 import { saveProfileToFirebase, getProfileFromFirebase } from '../services/profileService';
 import { signOut } from 'firebase/auth';
-import { auth, db } from '../firebase/firebaseConfig';
 
 const fallbackImage =
   'https://images.unsplash.com/photo-1494790108377-be9c29b29330';
@@ -118,7 +117,12 @@ export default function ProfileScreen({ navigation }) {
   useEffect(() => {
     const loadProfile = async () => {
       const firebaseData = await getProfileFromFirebase();
-const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+
+      const userId = auth.currentUser?.uid;
+
+if (!userId) {
+  return;
+}
 
 let finalData = firebaseData || profileDraft;
 
@@ -206,6 +210,33 @@ applyProfileData(finalData);
       };
 
       await saveProfileToFirebase(updatedProfile);
+
+      const userId = auth.currentUser?.uid;
+
+if (userId && updatedProfile.role === 'provider') {
+  await setDoc(
+    doc(db, 'listings', `${userId}_listing`),
+    {
+      hostName: name || '',
+      area: location || '',
+      location: location || '',
+      price: Number(price),
+      billsIncluded,
+      accommodationType,
+      roomType,
+      tenants: Number(tenants),
+      bedroomCount: Number(bedroomCount),
+      bathroomCount: Number(bathroomCount),
+      wifi,
+      furnished,
+      livingRoom,
+      gardenBalcony,
+      lifestyle: selectedTags,
+      updatedAt: serverTimestamp(),
+    },
+    { merge: true }
+  );
+}
 
       setSavedMessage(true);
       setTimeout(() => setSavedMessage(false), 1800);

@@ -27,6 +27,7 @@ import {
   updateDoc,
   deleteDoc,
   getDoc,
+  arrayRemove,
 } from 'firebase/firestore';
 
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -39,7 +40,11 @@ export default function ChatScreen({ navigation, route }) {
 
   const scrollViewRef = useRef(null);
 
-  const currentUserId = `demoUser_${Platform.OS}`;
+  const currentUserId = auth.currentUser?.uid;
+
+if (!currentUserId) {
+  return null;
+}
 
  const otherUserId = conversation.id || 'unknownUser';
 
@@ -52,17 +57,31 @@ export default function ChatScreen({ navigation, route }) {
 
 
 
-  useEffect(() => {
+useEffect(() => {
+  const loadChatMessages = async () => {
+    const chatSnap = await getDoc(doc(db, 'chats', chatId));
+    const clearedAt = chatSnap.exists()
+      ? chatSnap.data()?.clearedAtFor?.[currentUserId]
+      : null;
+
     const messagesRef = collection(db, 'chats', chatId, 'messages');
     const q = query(messagesRef, orderBy('createdAt', 'asc'));
 
     const unsubscribe = onSnapshot(
       q,
       (snapshot) => {
-        const loadedMessages = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const loadedMessages = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((message) => {
+            if (!clearedAt?.toDate || !message.createdAt?.toDate) {
+              return true;
+            }
+
+            return message.createdAt.toDate() > clearedAt.toDate();
+          });
 
         setMessages(loadedMessages);
         scrollToBottom();
@@ -73,7 +92,16 @@ export default function ChatScreen({ navigation, route }) {
     );
 
     return unsubscribe;
-  }, [chatId]);
+  };
+
+  const unsubscribePromise = loadChatMessages();
+
+  return () => {
+    unsubscribePromise.then((unsubscribe) => {
+      if (unsubscribe) unsubscribe();
+    });
+  };
+}, [chatId, currentUserId]);
 
   const scrollToBottom = () => {
     setTimeout(() => {
@@ -92,6 +120,7 @@ export default function ChatScreen({ navigation, route }) {
 
   const deleteMessage = async (messageId) => {
     try {
+      
       await deleteDoc(doc(db, 'chats', chatId, 'messages', messageId));
     } catch (error) {
       console.log('Delete message error:', error);
@@ -179,16 +208,17 @@ export default function ChatScreen({ navigation, route }) {
       const chatRef = doc(db, 'chats', chatId);
 
       await setDoc(
-        chatRef,
-        {
-          participants: [currentUserId, otherUserId],
-          otherName: conversation.name || 'Chat',
-          otherAvatar: conversation.avatar || null,
-          lastMessage: trimmed,
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+  chatRef,
+  {
+    participants: [currentUserId, otherUserId],
+    otherName: conversation.name || 'Chat',
+    otherAvatar: conversation.avatar || null,
+    lastMessage: trimmed,
+    updatedAt: serverTimestamp(),
+    hiddenFor: arrayRemove(otherUserId),
+  },
+  { merge: true }
+);
 
       await addDoc(collection(db, 'chats', chatId, 'messages'), {
         type: 'text',
@@ -238,16 +268,17 @@ export default function ChatScreen({ navigation, route }) {
       const chatRef = doc(db, 'chats', chatId);
 
       await setDoc(
-        chatRef,
-        {
-          participants: [currentUserId, otherUserId],
-          otherName: conversation.name || 'Chat',
-          otherAvatar: conversation.avatar || null,
-          lastMessage: 'Photo shared',
-          updatedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+  chatRef,
+  {
+    participants: [currentUserId, otherUserId],
+    otherName: conversation.name || 'Chat',
+    otherAvatar: conversation.avatar || null,
+    lastMessage: trimmed,
+    updatedAt: serverTimestamp(),
+    hiddenFor: arrayRemove(otherUserId),
+  },
+  { merge: true }
+);
 
       await addDoc(collection(db, 'chats', chatId, 'messages'), {
         type: 'image',

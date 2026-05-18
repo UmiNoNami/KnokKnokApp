@@ -1,24 +1,36 @@
 import { doc, setDoc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db, auth } from '../firebase/firebaseConfig';
-import { Platform } from 'react-native';
 
 const getUserId = () => {
-  return auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    throw new Error('No logged-in user found');
+  }
+
+  return userId;
 };
 
 
 export async function saveProfileToFirebase(profileData) {
   const USER_ID = getUserId();
 
+  const cleanData = Object.fromEntries(
+    Object.entries(profileData).filter(([_, value]) => value !== undefined)
+  );
+
   await setDoc(
     doc(db, 'users', USER_ID),
     {
-      ...profileData,
+      ...cleanData,
       id: USER_ID,
       ownerId: USER_ID,
       isActive: true,
-      occupation: profileData.job || profileData.occupation || '',
-      profilePhoto: profileData.photos?.[0] || '',
+      occupation: cleanData.job || cleanData.occupation || '',
+      profilePhoto:
+  Array.isArray(cleanData.photos) && cleanData.photos.length > 0
+    ? cleanData.photos[0]
+    : '',
       updatedAt: new Date().toISOString(),
     },
     { merge: true }
@@ -39,6 +51,8 @@ export async function getProfileFromFirebase() {
 
 export async function pauseProfileInFirebase() {
   const USER_ID = getUserId();
+
+  console.log('PROFILE DATA SAVING:', cleanData);
 
   await setDoc(
     doc(db, 'users', USER_ID),

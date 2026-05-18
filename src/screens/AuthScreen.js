@@ -24,27 +24,49 @@ export default function AuthScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  const handleAuth = async () => {
-    const cleanEmail = email.trim();
+ const handleAuth = async () => {
+  const cleanEmail = email.trim();
 
-    if (!cleanEmail || !password) {
-      Alert.alert('Missing details', 'Please enter email and password.');
+  if (!cleanEmail || !password) {
+    Alert.alert('Missing details', 'Please enter email and password.');
+    return;
+  }
+
+  try {
+    await signInWithEmailAndPassword(auth, cleanEmail, password);
+
+    signIn();
+    navigation.navigate('UserDetails');
+  } catch (error) {
+    if (
+      error.code === 'auth/user-not-found' ||
+      error.code === 'auth/invalid-credential'
+    ) {
+      try {
+        await createUserWithEmailAndPassword(
+          auth,
+          cleanEmail,
+          password
+        );
+
+        signIn();
+        navigation.navigate('UserDetails');
+      } catch (createError) {
+        Alert.alert(
+          'Authentication failed',
+          createError.message
+        );
+      }
+
       return;
     }
 
-    try {
-      await signInWithEmailAndPassword(auth, cleanEmail, password);
-      signIn();
-    } catch (signInError) {
-      try {
-        await createUserWithEmailAndPassword(auth, cleanEmail, password);
-        signIn();
-      } catch (createError) {
-        console.log('Auth error:', createError);
-        Alert.alert('Login failed', createError.message);
-      }
-    }
-  };
+    Alert.alert(
+      'Login failed',
+      'Wrong password or account already exists.'
+    );
+  }
+};
 
   return (
     <AppScreen>

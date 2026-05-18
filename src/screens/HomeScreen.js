@@ -14,7 +14,6 @@ import {
   StyleSheet,
   Text,
   View,
-  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -47,8 +46,11 @@ export default function HomeScreen() {
 
   const role = firebaseRole || profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
-  const currentUserId =
-  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const currentUserId = auth.currentUser?.uid;
+  if (!currentUserId) {
+  return null;
+}
+
 
   const [firebaseListings, setFirebaseListings] = useState([]);
   const [firebaseUsers, setFirebaseUsers] = useState([]);
@@ -245,7 +247,7 @@ if (currentUserRole === targetUserRole) {
     const reverseSwipeSnapshot = await getDocs(reverseSwipeQuery);
 
     if (!reverseSwipeSnapshot.empty) {
-      const matchId = `${currentUserId}_${targetId}_${Date.now()}`;
+      const matchId = [currentUserId, targetId].sort().join('_');
 
       await setDoc(
         doc(db, 'matches', matchId),

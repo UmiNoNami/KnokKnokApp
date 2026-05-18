@@ -86,30 +86,30 @@ export default function UserDetailsScreen({ navigation }) {
   };
 
   const handleNext = async () => {
-    if (!name.trim()) {
-      Alert.alert('Missing name', 'Please enter your name.');
-      return;
-    }
+  if (!name.trim()) {
+    Alert.alert('Missing name', 'Please enter your name.');
+    return;
+  }
 
-    const dateOfBirth = `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`;
+  const dateOfBirth = `${dayValue || ''}-${monthValue || ''}-${yearValue || ''}`;
 
-    updateProfile({
-      name,
-      job,
-      gender: genderValue,
-      dateOfBirth,
-    });
-
-    await saveProfileToFirebase({
-      name,
-      job,
-      gender: genderValue,
-      dateOfBirth,
-    });
-
-    navigation.navigate('LookingFor');
+  const profileData = {
+    name: name || '',
+    job: job || '',
+    gender: genderValue || '',
+    dateOfBirth: dateOfBirth || '',
   };
 
+  updateProfile(profileData);
+
+  try {
+    await saveProfileToFirebase(profileData);
+    navigation.navigate('LookingFor');
+  } catch (error) {
+    console.log('User details save error:', error);
+    Alert.alert('Could not continue', error.message);
+  }
+};
   const PickerField = ({ label, value, placeholder, onPress, style }) => (
     <Pressable
       style={({ pressed }) => [

@@ -136,17 +136,29 @@ export async function seedHousesToFirebase() {
 
 // ---------- SWIPES + MATCHES ----------
 
-const DEMO_USER_ID = 'demoUser';
+import { auth } from '../firebase/firebaseConfig';
+
+const getCurrentUserId = () => {
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    throw new Error('No logged-in user');
+  }
+
+  return userId;
+};
 
 export async function saveSwipeToFirebase({
   targetId,
   targetType,
   direction,
 }) {
-  const swipeId = `${DEMO_USER_ID}_${targetId}`;
+  const currentUserId = getCurrentUserId();
+
+const swipeId = `${currentUserId}_${targetId}`;
 
   await setDoc(doc(db, 'swipes', swipeId), {
-    fromUserId: DEMO_USER_ID,
+    fromUserId: currentUserId,
     targetId,
     targetType,
     direction,

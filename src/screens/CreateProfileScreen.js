@@ -13,7 +13,6 @@ import {
   Text,
   TextInput,
   View,
-  Platform,
 } from 'react-native';
 import { useAppState } from '../providers/AppProvider';
 import * as ImagePicker from 'expo-image-picker';
@@ -32,7 +31,11 @@ export default function CreateProfileScreen({ navigation }) {
   const { updateProfile, profileDraft } = useAppState();
 
   const uploadProfileImageAsync = async (uri) => {
-  const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const userId = auth.currentUser?.uid;
+
+  if (!userId) {
+    throw new Error('No logged-in user found');
+  }
 
   const response = await fetch(uri);
   const blob = await response.blob();
@@ -50,7 +53,7 @@ export default function CreateProfileScreen({ navigation }) {
       Alert.alert('Limit reached', 'You can upload up to 4 photos.');
       return;
     }
-
+     console.log('CURRENT AUTH USER:', auth.currentUser?.uid);
     const permissionResult =
       await ImagePicker.requestMediaLibraryPermissionsAsync();
 
@@ -63,7 +66,7 @@ export default function CreateProfileScreen({ navigation }) {
     }
 
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
       quality: 1,
@@ -71,9 +74,16 @@ export default function CreateProfileScreen({ navigation }) {
 if (!result.canceled) {
   const selectedUri = result.assets[0].uri;
 
-  const uploadedUrl = await uploadProfileImageAsync(selectedUri);
+  try {
+    const uploadedUrl = await uploadProfileImageAsync(selectedUri);
 
-  setPhotos((prev) => [...prev, uploadedUrl]);
+    console.log('UPLOADED IMAGE URL:', uploadedUrl);
+
+    setPhotos((prev) => [...prev, uploadedUrl]);
+  } catch (error) {
+    console.log('Profile image upload error:', error);
+    Alert.alert('Upload failed', error.message);
+  }
 }
   };
 
@@ -149,7 +159,11 @@ setPhotos((prev) =>
   };
 
   const handleFinish = async () => {
-  const userId = auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const userId = auth.currentUser?.uid;
+
+if (!userId) {
+  throw new Error('No logged-in user found');
+}
   const isProvider = profileDraft?.role === 'provider';
 
   if (isProvider) {

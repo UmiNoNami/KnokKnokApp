@@ -7,7 +7,6 @@ import {
   Text,
   View,
   Alert,
-  Platform,
 } from 'react-native';
 
 import AppScreen from '../components/AppScreen';
@@ -20,6 +19,8 @@ import {
   doc,
   deleteDoc,
   getDoc,
+  arrayUnion,
+  setDoc,
 } from 'firebase/firestore';
 
 import { db, auth } from '../firebase/firebaseConfig';
@@ -30,8 +31,11 @@ export default function MessagesScreen({ navigation }) {
 
   const role = profileDraft?.role || 'seeker';
   const isAccommodationSeeker = role === 'seeker';
-  const currentUserId =
-  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+  const currentUserId = auth.currentUser?.uid;
+
+if (!currentUserId) {
+  return null;
+}
 
   const [firebaseConversations, setFirebaseConversations] = useState([]);
 
@@ -50,6 +54,10 @@ export default function MessagesScreen({ navigation }) {
           };
 
           const participants = chatData.participants || [];
+
+          if (chatData.hiddenFor?.includes(currentUserId)) {
+  return null;
+}
 
           if (!participants.includes(currentUserId)) {
             return null;
@@ -126,16 +134,32 @@ avatar: item.otherAvatar || null,
       [
         { text: 'Cancel', style: 'cancel' },
         {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await deleteDoc(doc(db, 'chats', chatId));
-            } catch (error) {
-              console.log('Delete chat error:', error);
-            }
-          },
+  text: 'Delete',
+  style: 'destructive',
+  onPress: async () => {
+    console.log('CONFIRMED DELETE CHAT:', chatId, currentUserId);
+
+    try {
+      await setDoc(
+        doc(db, 'chats', chatId),
+        {
+          hiddenFor: arrayUnion(currentUserId),
         },
+        { merge: true }
+      );
+
+      console.log('CHAT HIDDEN SUCCESS');
+       
+      setFirebaseConversations((current) =>
+  current.filter((chat) => chat.id !== chatId)
+);
+
+    } catch (error) {
+      console.log('Delete chat error:', error);
+      Alert.alert('Delete failed', error.message);
+    }
+  },
+},
       ]
     );
   };
@@ -219,7 +243,8 @@ avatar: item.otherAvatar || null,
                 onPress={(event) => {
                   event.stopPropagation();
                   deleteChat(item.chatId);
-                }}
+                }
+              }
               >
                 <Text style={styles.deleteText}>×</Text>
               </Pressable>

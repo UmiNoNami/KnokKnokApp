@@ -6,6 +6,7 @@ import AppTabs from './AppTabs';
 import SplashScreen from '../screens/SplashScreen';
 import WelcomeScreen from '../screens/WelcomeScreen';
 import SignInOptionsScreen from '../screens/SignInOptionsScreen';
+import AuthScreen from '../screens/AuthScreen';
 import PhoneNumberScreen from '../screens/PhoneNumberScreen';
 import VerificationCodeScreen from '../screens/VerificationCodeScreen';
 import UserDetailsScreen from '../screens/UserDetailsScreen';
@@ -37,6 +38,7 @@ export default function RootNavigator() {
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Welcome" component={WelcomeScreen} />
         <Stack.Screen name="SignInOptions" component={SignInOptionsScreen} />
+        <Stack.Screen name="Auth" component={AuthScreen} />
         <Stack.Screen name="PhoneNumber" component={PhoneNumberScreen} />
         <Stack.Screen name="VerificationCode" component={VerificationCodeScreen} />
         <Stack.Screen name="UserDetails" component={UserDetailsScreen} />

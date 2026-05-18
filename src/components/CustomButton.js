@@ -1,11 +1,12 @@
 import React from 'react';
-import { Pressable, Text, StyleSheet } from 'react-native';
+import { Image, Pressable, Text, StyleSheet, View } from 'react-native';
 
 export default function CustomButton({
   title,
   onPress,
   style,
   textStyle,
+  icon,
   disabled = false,
 }) {
   return (
@@ -20,16 +21,22 @@ export default function CustomButton({
       ]}
     >
       {({ pressed, hovered }) => (
-        <Text
-          style={[
-            styles.buttonText,
-            (pressed || hovered) && !disabled && styles.buttonTextActive,
-            disabled && styles.buttonTextDisabled,
-            textStyle,
-          ]}
-        >
-          {title}
-        </Text>
+        <View style={styles.content}>
+          {icon && (
+            <Image source={icon} style={styles.icon} resizeMode="contain" />
+          )}
+
+          <Text
+            style={[
+              styles.buttonText,
+              (pressed || hovered) && !disabled && styles.buttonTextActive,
+              disabled && styles.buttonTextDisabled,
+              textStyle,
+            ]}
+          >
+            {title}
+          </Text>
+        </View>
       )}
     </Pressable>
   );
@@ -45,6 +52,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  content: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  icon: {
+    width: 18,
+    height: 18,
+    marginRight: 10,
   },
 
   buttonActive: {

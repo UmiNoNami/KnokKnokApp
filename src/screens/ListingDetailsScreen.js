@@ -12,7 +12,6 @@ import { BlurView } from 'expo-blur';
 import AppScreen from '../components/AppScreen';
 import { doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { db, auth } from '../firebase/firebaseConfig';
-import { Platform } from 'react-native';
 
 export default function ListingDetailsScreen({ navigation, route }) {
   const { item, type } = route.params;
@@ -58,11 +57,15 @@ const isAccommodation = type === 'listing';
     setShowMessagePrompt(false);
   };
 
+  const currentUserId = auth.currentUser?.uid;
   const goToChat = async () => {
     closeMatchModal();
 
-    const currentUserId =
-  auth.currentUser?.uid || `demoUser_${Platform.OS}`;
+const userId = auth.currentUser?.uid;
+
+if (!userId) {
+  return;
+}
 
 if (!currentUserId) {
   return null;
@@ -92,20 +95,7 @@ if (!currentUserId) {
       ? item.houseImages?.[0] || null
       : null;
 
-    await setDoc(
-      doc(db, 'chats', chatId),
-      {
-        participants: [currentUserId, otherUserId],
-        otherName,
-        otherAvatar,
-        listingTitle,
-        listingImage,
-        matchMessage: 'You matched with this user. Say hi 👋',
-        lastMessage: '',
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
+  
 
     navigation.navigate('Chat', {
       conversation: {
