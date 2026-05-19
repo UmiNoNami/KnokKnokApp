@@ -1,5 +1,7 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   Keyboard,
   KeyboardAvoidingView,
   Platform,
@@ -12,10 +14,10 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import Slider from '@react-native-community/slider';
 
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import { useAppState } from '../providers/AppProvider';
 import { saveProfileToFirebase } from '../services/profileService';
@@ -47,9 +49,56 @@ export default function AccommodationDetailsScreen({ navigation }) {
   const [priceRange, setPriceRange] = useState(200);
   const [location, setLocation] = useState('');
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
 
   const { updateProfile, profileDraft } = useAppState();
+
   const scrollRef = useRef(null);
+
+  const circleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
 
   const suggestions = useMemo(() => {
     const query = location.trim().toLowerCase();
@@ -110,31 +159,6 @@ export default function AccommodationDetailsScreen({ navigation }) {
     </View>
   );
 
-  const ToggleRow = ({
-    label,
-    value,
-    onValueChange,
-    showDivider = true,
-  }) => (
-    <View>
-      <View style={styles.rowBetween}>
-        <Text style={styles.rowLabel}>{label}</Text>
-
-        <View style={styles.switchWrap}>
-          <Switch
-            value={value}
-            onValueChange={onValueChange}
-            trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-            thumbColor="#FFFFFF"
-            ios_backgroundColor="#D1D1D1"
-          />
-        </View>
-      </View>
-
-      {showDivider && <View style={styles.divider} />}
-    </View>
-  );
-
   const handleNext = async () => {
     updateProfile({
       tenants: tenantsCount,
@@ -166,7 +190,44 @@ export default function AccommodationDetailsScreen({ navigation }) {
   };
 
   return (
-    <AppScreen padded={false}>
+    <View style={styles.screen}>
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && (
+          <View style={styles.androidSoftOverlay} />
+        )}
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -174,232 +235,276 @@ export default function AccommodationDetailsScreen({ navigation }) {
       >
         <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
           <ScrollView
-  ref={scrollRef}
-  style={styles.container}
-  contentContainerStyle={styles.scrollContent}
-  keyboardShouldPersistTaps="handled"
-  showsVerticalScrollIndicator={false}
->
-        
-              <Text style={styles.title}>Accommodation Details</Text>
+            ref={scrollRef}
+            style={styles.container}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <Text style={styles.title}>
+              Accommodation Details
+            </Text>
 
-              <View style={styles.singleRowCard}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.rowLabel}>
-                    Number of{'\n'}tenants
-                  </Text>
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>
+                  Number of{'\n'}tenants
+                </Text>
 
-                  <StepperControl
-                    value={tenantsCount}
-                    setValue={setTenantsCount}
+                <StepperControl
+                  value={tenantsCount}
+                  setValue={setTenantsCount}
+                />
+              </View>
+            </View>
+
+            <View style={styles.detailsCard}>
+              <StepperRow
+                label="Bathroom"
+                value={bathroomCount}
+                setValue={setBathroomCount}
+              />
+
+              <StepperRow
+                label="Bedroom"
+                value={bedroomCount}
+                setValue={setBedroomCount}
+                showDivider={false}
+              />
+            </View>
+
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Living Room</Text>
+
+                <View style={styles.switchWrap}>
+                  <Switch
+                    value={livingRoom}
+                    onValueChange={setLivingRoom}
+                    trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#D1D1D1"
                   />
                 </View>
               </View>
+            </View>
 
-              <View style={styles.detailsCard}>
-  <StepperRow
-    label="Bathroom"
-    value={bathroomCount}
-    setValue={setBathroomCount}
-  />
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Garden/Balcony</Text>
 
-  <StepperRow
-    label="Bedroom"
-    value={bedroomCount}
-    setValue={setBedroomCount}
-    showDivider={false}
-  />
-</View>
-
-<View style={styles.singleRowCard}>
-  <View style={styles.rowBetween}>
-    <Text style={styles.rowLabel}>Living Room</Text>
-
-    <View style={styles.switchWrap}>
-      <Switch
-        value={livingRoom}
-        onValueChange={setLivingRoom}
-        trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-        thumbColor="#FFFFFF"
-        ios_backgroundColor="#D1D1D1"
-      />
-    </View>
-  </View>
-</View>
-
-<View style={styles.singleRowCard}>
-  <View style={styles.rowBetween}>
-    <Text style={styles.rowLabel}>Garden/Balcony</Text>
-
-    <View style={styles.switchWrap}>
-      <Switch
-        value={gardenBalcony}
-        onValueChange={setGardenBalcony}
-        trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-        thumbColor="#FFFFFF"
-        ios_backgroundColor="#D1D1D1"
-      />
-    </View>
-  </View>
-</View>
-
-              <View style={styles.singleRowCard}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.rowLabel}>Wifi</Text>
-
-                  <View style={styles.switchWrap}>
-                    <Switch
-                      value={wifi}
-                      onValueChange={setWifi}
-                      trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#D1D1D1"
-                    />
-                  </View>
+                <View style={styles.switchWrap}>
+                  <Switch
+                    value={gardenBalcony}
+                    onValueChange={setGardenBalcony}
+                    trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#D1D1D1"
+                  />
                 </View>
               </View>
+            </View>
 
-              <View style={styles.singleRowCard}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.rowLabel}>Furnished</Text>
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Wifi</Text>
 
-                  <View style={styles.switchWrap}>
-                    <Switch
-                      value={furnished}
-                      onValueChange={setFurnished}
-                      trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#D1D1D1"
-                    />
-                  </View>
+                <View style={styles.switchWrap}>
+                  <Switch
+                    value={wifi}
+                    onValueChange={setWifi}
+                    trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#D1D1D1"
+                  />
                 </View>
               </View>
+            </View>
 
-              <View style={styles.singleRowCard}>
-                <View style={styles.rowBetween}>
-                  <Text style={styles.rowLabel}>Bill Included</Text>
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Furnished</Text>
 
-                  <View style={styles.switchWrap}>
-                    <Switch
-                      value={billIncluded}
-                      onValueChange={setBillIncluded}
-                      trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
-                      thumbColor="#FFFFFF"
-                      ios_backgroundColor="#D1D1D1"
-                    />
-                  </View>
+                <View style={styles.switchWrap}>
+                  <Switch
+                    value={furnished}
+                    onValueChange={setFurnished}
+                    trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#D1D1D1"
+                  />
                 </View>
               </View>
+            </View>
 
-              <View style={styles.priceCard}>
-                <Text style={styles.rowLabel}>
-  {profileDraft?.role === 'seeker'
-    ? 'Your Budget'
-    : 'Rent Price'}
-</Text>
+            <View style={styles.singleRowCard}>
+              <View style={styles.rowBetween}>
+                <Text style={styles.rowLabel}>Bill Included</Text>
 
-                <Slider
-                  style={styles.slider}
-                  minimumValue={50}
-                  maximumValue={1000}
-                  step={10}
-                  value={priceRange}
-                  onValueChange={setPriceRange}
-                  minimumTrackTintColor="#F4B400"
-                  maximumTrackTintColor="#E5E5E5"
-                  thumbTintColor="#F4B400"
-                />
-
-                <View style={styles.priceRow}>
-                  <Text style={styles.priceText}>€{priceRange}</Text>
-                  <Text style={styles.perWeekText}>per week</Text>
+                <View style={styles.switchWrap}>
+                  <Switch
+                    value={billIncluded}
+                    onValueChange={setBillIncluded}
+                    trackColor={{ false: '#D1D1D1', true: '#F4B400' }}
+                    thumbColor="#FFFFFF"
+                    ios_backgroundColor="#D1D1D1"
+                  />
                 </View>
               </View>
+            </View>
 
-              <Text style={styles.locationTitle}>
-                Preferred area or location
+            <View style={styles.priceCard}>
+              <Text style={styles.rowLabel}>
+                {profileDraft?.role === 'seeker'
+                  ? 'Your Budget'
+                  : 'Rent Price'}
               </Text>
 
-              <Text style={styles.locationSubtitle}>
-                You can type a place or choose one of the popular areas.
-              </Text>
-
-              <TextInput
-  style={styles.locationInput}
-  placeholder="e.g. Bray, City Centre, Dublin 7"
-  placeholderTextColor="#A8A29E"
-  value={location}
-  onChangeText={setLocation}
-  onFocus={() => {
-    setShowSuggestions(true);
-
-    setTimeout(() => {
-      scrollRef.current?.scrollToEnd({ animated: true });
-    }, 250);
-  }}
+              <Slider
+                style={styles.slider}
+                minimumValue={50}
+                maximumValue={1000}
+                step={10}
+                value={priceRange}
+                onValueChange={setPriceRange}
+                minimumTrackTintColor="#F4B400"
+                maximumTrackTintColor="#E5E5E5"
+                thumbTintColor="#F4B400"
               />
 
-              {showSuggestions && suggestions.length > 0 && (
-                <View style={styles.suggestionsBox}>
-                  {suggestions.map((area) => (
-                    <Pressable
-                      key={area}
-                      style={({ pressed }) => [
-                        styles.suggestionItem,
-                        pressed && styles.suggestionPressed,
-                      ]}
-                      onPress={() => {
-  setLocation(area);
-  setShowSuggestions(false);
-  Keyboard.dismiss();
-}}
-                    >
-                      <Text style={styles.suggestionText}>{area}</Text>
-                    </Pressable>
-                  ))}
-                </View>
-              )}
-            
-
-            <View style={styles.bottomContent}>
-              <View style={styles.carouselDots}>
-                <View style={styles.dot} />
-                <View style={styles.dot} />
-                <View style={styles.dot} />
-                <View style={[styles.dot, styles.activeDot]} />
+              <View style={styles.priceRow}>
+                <Text style={styles.priceText}>€{priceRange}</Text>
+                <Text style={styles.perWeekText}>per week</Text>
               </View>
-
-              <CustomButton title="Next" onPress={handleNext} />
             </View>
+
+            <Text style={styles.locationTitle}>
+              Preferred area or location
+            </Text>
+
+            <Text style={styles.locationSubtitle}>
+              You can type a place or choose one of the popular areas.
+            </Text>
+
+            <TextInput
+              style={styles.locationInput}
+              placeholder="e.g. Bray, City Centre, Dublin 7"
+              placeholderTextColor="#A8A29E"
+              value={location}
+              onChangeText={setLocation}
+              onFocus={() => {
+                setShowSuggestions(true);
+
+                setTimeout(() => {
+                  scrollRef.current?.scrollToEnd({ animated: true });
+                }, 250);
+              }}
+            />
+
+            {showSuggestions && suggestions.length > 0 && (
+              <View style={styles.suggestionsBox}>
+                {suggestions.map((area) => (
+                  <Pressable
+                    key={area}
+                    style={({ pressed }) => [
+                      styles.suggestionItem,
+                      pressed && styles.suggestionPressed,
+                    ]}
+                    onPress={() => {
+                      setLocation(area);
+                      setShowSuggestions(false);
+                      Keyboard.dismiss();
+                    }}
+                  >
+                    <Text style={styles.suggestionText}>{area}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+
+            {!keyboardVisible && (
+              <View style={styles.bottomContent}>
+                <View style={styles.carouselDots}>
+                  <View style={styles.dot} />
+                  <View style={styles.dot} />
+                  <View style={styles.dot} />
+                  <View style={[styles.dot, styles.activeDot]} />
+                  <View style={styles.dot} />
+                </View>
+
+                <CustomButton
+                  title="Next"
+                  onPress={handleNext}
+                  style={styles.buttonShadow}
+                />
+              </View>
+            )}
           </ScrollView>
         </TouchableWithoutFeedback>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FDF4D4',
+    overflow: 'hidden',
+  },
+
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
+  },
+
   flex: {
     flex: 1,
   },
 
- container: {
-  flex: 1,
-  backgroundColor: '#FFFFFF',
-  paddingHorizontal: 32,
-  paddingTop: 70,
-  paddingBottom: 0,
-},
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FDF4D4',
+  },
 
-  topContent: {
-  flex: 1,
-  marginTop: 20,
-  maxHeight: '82%',
-},
+  colorBlob: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+  },
+
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
+
+  container: {
+    flex: 1,
+    paddingHorizontal: 32,
+    paddingTop: 70,
+    paddingBottom: 0,
+  },
 
   scrollContent: {
-  paddingBottom: Platform.OS === 'android' ? 160 : 70,
-},
+    paddingBottom: Platform.OS === 'android' ? 160 : 90,
+  },
 
   title: {
     fontSize: 24,
@@ -575,14 +680,14 @@ const styles = StyleSheet.create({
   },
 
   suggestionsBox: {
-  marginTop: 12,
-  marginBottom: 24,
-  borderRadius: 18,
-  borderWidth: 1,
-  borderColor: 'rgba(43,43,43,0.12)',
-  backgroundColor: '#FFFFFF',
-  overflow: 'hidden',
-},
+    marginTop: 12,
+    marginBottom: 24,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: 'rgba(43,43,43,0.12)',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+  },
 
   suggestionItem: {
     paddingVertical: 14,
@@ -603,9 +708,9 @@ const styles = StyleSheet.create({
   },
 
   bottomContent: {
-  marginTop: 36,
-  marginBottom: 0,
-  paddingTop: 10,
+    marginTop: 36,
+    marginBottom: 0,
+    paddingTop: 10,
   },
 
   carouselDots: {
@@ -616,14 +721,22 @@ const styles = StyleSheet.create({
   },
 
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 8,
     backgroundColor: 'rgba(43,43,43,0.18)',
   },
 
   activeDot: {
     width: 22,
     backgroundColor: '#2B2B2B',
+  },
+
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
 });

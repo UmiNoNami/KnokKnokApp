@@ -1,7 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { saveProfileToFirebase } from '../services/profileService';
 import {
   Alert,
+  Animated,
+  Easing,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -14,23 +16,66 @@ import {
   TouchableWithoutFeedback,
   View,
 } from 'react-native';
-
+import { BlurView } from 'expo-blur';
+import { auth } from '../firebase/firebaseConfig';
 import { useAppState } from '../providers/AppProvider';
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
-
 export default function UserDetailsScreen({ navigation }) {
   const { updateProfile, profileDraft } = useAppState();
 
   const [name, setName] = useState(profileDraft.name || '');
   const [job, setJob] = useState(profileDraft.job || '');
-
   const [dayValue, setDayValue] = useState(null);
   const [monthValue, setMonthValue] = useState(null);
   const [yearValue, setYearValue] = useState(null);
   const [genderValue, setGenderValue] = useState(null);
-
   const [pickerType, setPickerType] = useState(null);
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+
+  const circleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  useEffect(() => {
+    const showSub = Keyboard.addListener('keyboardDidShow', () => {
+      setKeyboardVisible(true);
+    });
+
+    const hideSub = Keyboard.addListener('keyboardDidHide', () => {
+      setKeyboardVisible(false);
+    });
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
+
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
 
   const dayItems = useMemo(
     () => Array.from({ length: 31 }, (_, i) => String(i + 1)),
@@ -38,7 +83,20 @@ export default function UserDetailsScreen({ navigation }) {
   );
 
   const monthItems = useMemo(
-    () => ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+    () => [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ],
     []
   );
 
@@ -85,7 +143,7 @@ export default function UserDetailsScreen({ navigation }) {
     return null;
   };
 
-  const handleNext = async () => {
+const handleNext = async () => {
   if (!name.trim()) {
     Alert.alert('Missing name', 'Please enter your name.');
     return;
@@ -102,15 +160,18 @@ export default function UserDetailsScreen({ navigation }) {
 
   updateProfile(profileData);
 
+  console.log('CURRENT USER:', auth.currentUser?.uid);
+
   try {
     await saveProfileToFirebase(profileData);
-    navigation.navigate('LookingFor');
   } catch (error) {
-    console.log('User details save error:', error);
-    Alert.alert('Could not continue', error.message);
+    console.log('User details save skipped:', error.message);
   }
+
+  navigation.navigate('LookingFor');
 };
-  const PickerField = ({ label, value, placeholder, onPress, style }) => (
+
+  const PickerField = ({ value, placeholder, onPress, style }) => (
     <Pressable
       style={({ pressed }) => [
         styles.pickerField,
@@ -120,10 +181,7 @@ export default function UserDetailsScreen({ navigation }) {
       onPress={onPress}
     >
       <Text
-        style={[
-          styles.pickerText,
-          !value && styles.placeholderText,
-        ]}
+        style={[styles.pickerText, !value && styles.placeholderText]}
         numberOfLines={1}
       >
         {value || placeholder}
@@ -134,7 +192,44 @@ export default function UserDetailsScreen({ navigation }) {
   );
 
   return (
-    <AppScreen padded={false}>
+    <View style={styles.screen}>
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && (
+          <View style={styles.androidSoftOverlay} />
+        )}
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -207,16 +302,23 @@ export default function UserDetailsScreen({ navigation }) {
               </View>
             </ScrollView>
 
-            <View style={styles.bottomContent}>
-              <View style={styles.carouselDots}>
-                <View style={styles.dot} />
-                <View style={styles.dot} />
-                <View style={styles.dot} />
-                <View style={[styles.dot, styles.activeDot]} />
-              </View>
+            {!keyboardVisible && (
+              <View style={styles.bottomContent}>
+                <View style={styles.carouselDots}>
+                  <View style={styles.dot} />
+                  <View style={styles.dot} />
+                  <View style={[styles.dot, styles.activeDot]} />
+                  <View style={styles.dot} />
+                  <View style={styles.dot} />
+                </View>
 
-              <CustomButton title="Next" onPress={handleNext} />
-            </View>
+                <CustomButton
+                  title="Next"
+                  onPress={handleNext}
+                  style={styles.buttonShadow}
+                />
+              </View>
+            )}
           </View>
         </TouchableWithoutFeedback>
 
@@ -269,25 +371,68 @@ export default function UserDetailsScreen({ navigation }) {
           </Pressable>
         </Modal>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FDF4D4',
+    overflow: 'hidden',
+  },
+
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
+  },
+
   flex: {
     flex: 1,
   },
 
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FDF4D4',
+  },
+
+  colorBlob: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+  },
+
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
     paddingBottom: 40,
   },
 
   scrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 130,
   },
 
   topContent: {
@@ -395,15 +540,23 @@ const styles = StyleSheet.create({
   },
 
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 8,
     backgroundColor: 'rgba(43,43,43,0.18)',
   },
 
   activeDot: {
     width: 22,
     backgroundColor: '#2B2B2B',
+  },
+
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
 
   modalOverlay: {

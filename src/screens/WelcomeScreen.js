@@ -3,6 +3,7 @@ import {
   Animated,
   Easing,
   Image,
+  Platform,
   StyleSheet,
   Text,
   View,
@@ -77,7 +78,14 @@ export default function WelcomeScreen({ navigation }) {
           ]}
         />
 
-        <BlurView intensity={60} tint="light" style={StyleSheet.absoluteFill} />
+        <BlurView
+  intensity={Platform.OS === 'android' ? 45 : 60}
+  tint="light"
+  experimentalBlurMethod="dimezisBlurView"
+  style={StyleSheet.absoluteFill}
+/>
+
+{Platform.OS === 'android' && <View style={styles.androidSoftOverlay} />}
       </View>
 
       <View style={styles.content}>
@@ -125,6 +133,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
 
+ androidSoftOverlay: {
+  ...StyleSheet.absoluteFillObject,
+  backgroundColor: 'rgba(253, 244, 212, 0.12)',
+},
+
   backgroundLayer: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: '#FDF4D4',
@@ -141,28 +154,28 @@ const styles = StyleSheet.create({
     backgroundColor: '#F4B400',
     left: -80,
     bottom: -40,
-    opacity: 0.65,
+    opacity: Platform.OS === 'android' ? 1 : 0.65,
   },
 
   greyBlob: {
-    backgroundColor: '#E8E7E3',
+    backgroundColor: '#e8e7e3',
     right: -80,
     top: 80,
-    opacity: 0.95,
+    opacity: Platform.OS === 'android' ? 1 : 0.95,
   },
 
   creamBlob: {
     backgroundColor: '#FDF4D4',
     left: -70,
     top: -70,
-    opacity: 0.95,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
   },
 
   whiteBlob: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FDF4D4',
     right: -90,
     bottom: 40,
-    opacity: 0.55,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.55,
   },
 
   content: {

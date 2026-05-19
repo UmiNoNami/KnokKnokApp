@@ -12,8 +12,10 @@ import {
   View,
   Alert,
   TouchableOpacity,
+  ImageBackground,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import {
   collection,
@@ -306,9 +308,14 @@ useEffect(() => {
       <KeyboardAvoidingView
   style={styles.screen}
   behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+  keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
 >
-        <View style={styles.inner}>
+        <ImageBackground
+  source={require('../../assets/icons/chatPattern.png')}
+  resizeMode="cover"
+  style={styles.inner}
+  imageStyle={styles.patternImage}
+>
           <View style={styles.header}>
             <Pressable onPress={() => navigation.goBack()}>
               <Text style={styles.back}>‹</Text>
@@ -392,7 +399,16 @@ useEffect(() => {
               );
             })}
           </ScrollView>
-
+           
+           <LinearGradient
+  pointerEvents="none"
+  colors={[
+    'rgba(0,0,0,0)',
+    'rgba(0,0,0,0.10)',
+    'rgba(0,0,0,0.18)',
+  ]}
+  style={styles.bottomShadow}
+/>
           <View style={styles.inputBar}>
             <Pressable style={styles.plusButton} onPress={pickImage}>
               <Text style={styles.plus}>＋</Text>
@@ -403,7 +419,7 @@ useEffect(() => {
                 value={text}
                 onChangeText={setText}
                 placeholder={editingMessageId ? 'Edit message' : 'Type Message'}
-                placeholderTextColor="#D4D4D4"
+                placeholderTextColor="#757474"
                 style={styles.input}
                 returnKeyType={editingMessageId ? 'done' : 'send'}
                 onSubmitEditing={sendMessage}
@@ -417,12 +433,14 @@ blurOnSubmit={false}
   style={styles.sendButton}
   onPress={sendMessage}
 >
-  <Text style={styles.sendText}>
-    {editingMessageId ? 'Save' : 'Send'}
-  </Text>
+  <Image
+  source={require('../../assets/icons/send.png')}
+  style={styles.sendIcon}
+  resizeMode="contain"
+/>
 </TouchableOpacity>
           </View>
-        </View>
+        </ImageBackground>
       </KeyboardAvoidingView>
     </AppScreen>
   );
@@ -439,18 +457,30 @@ const styles = StyleSheet.create({
   },
 
   header: {
-    paddingTop: 58,
+    paddingTop: 28,
     paddingHorizontal: 26,
     flexDirection: 'row',
     alignItems: 'center',
   },
+back: {
+  width: 54,
+  height: 54,
+  borderRadius: 27,
+  overflow: 'hidden',
 
-  back: {
-    width: 44,
-    fontSize: 44,
-    lineHeight: 44,
-    color: '#111',
-  },
+  textAlign: 'center',
+  textAlignVertical: 'center',
+
+  fontSize: 42,
+  lineHeight: 54,
+
+  color: '#111',
+
+  backgroundColor: 'rgba(255,255,255,0.38)',
+
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.5)',
+},
 
   title: {
     flex: 1,
@@ -489,7 +519,9 @@ const styles = StyleSheet.create({
 
   leftBubble: {
     maxWidth: 252,
-    backgroundColor: '#E9E7E4',
+     borderWidth: 1,
+     borderColor: '#F4B400',
+    backgroundColor: '#ffffff',
     borderRadius: 24,
     paddingHorizontal: 20,
     paddingVertical: 14,
@@ -503,8 +535,8 @@ const styles = StyleSheet.create({
   rightBubble: {
     maxWidth: 230,
     borderWidth: 1,
-    borderColor: '#F2B705',
-    backgroundColor: '#FFFFFF',
+    borderColor: '#F4B400',
+    backgroundColor: '#F4B400',
     borderRadius: 22,
     paddingHorizontal: 26,
     paddingVertical: 14,
@@ -543,58 +575,76 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F2B705',
   },
+
+
 inputBar: {
   flexDirection: 'row',
   alignItems: 'center',
   paddingHorizontal: 18,
   paddingBottom: Platform.OS === 'android' ? 18 : 34,
-  paddingTop: 10,
+  paddingTop: 12,
   gap: 10,
-  backgroundColor: '#FAF8F4',
+  backgroundColor: 'transparent',
+  zIndex: 10,
+  elevation: 10,
 },
 
-  plusButton: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E5E2DD',
-  },
+bottomShadow: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: 180,
 
-  plus: {
-    fontSize: 30,
-    color: '#111',
-  },
+  backgroundColor: 'rgba(0,0,0,0.18)',
+},
 
-  inputBox: {
-    flex: 1,
-    height: 54,
-    borderRadius: 27,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#E5E2DD',
-    justifyContent: 'center',
-    paddingHorizontal: 18,
-  },
-
-  input: {
-    fontSize: 15,
-    color: '#111',
-  },
-
-  sendButton: {
-  minWidth: 74,
+plusButton: {
+  width: 54,
   height: 54,
-  paddingHorizontal: 16,
   borderRadius: 27,
-  backgroundColor: '#F2B705',
+  backgroundColor: 'rgba(255,255,255,0.12)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.28)',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 999,
-  elevation: 20,
+},
+
+plus: {
+  fontSize: 28,
+  color: '#2b2b2b',
+  fontWeight: '300',
+},
+
+inputBox: {
+  flex: 1,
+  height: 54,
+  borderRadius: 27,
+
+  backgroundColor: 'rgba(255,255,255,0.42)',
+
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.55)',
+
+  justifyContent: 'center',
+  paddingHorizontal: 20,
+
+  shadowColor: '#000',
+  shadowOpacity: 0.06,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 4 },
+  elevation: 3,
+},
+
+sendButton: {
+  width: 54,
+  height: 54,
+  borderRadius: 27,
+  backgroundColor: 'rgba(255,255,255,0.12)',
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.28)',
+  alignItems: 'center',
+  justifyContent: 'center',
 },
 
   sendText: {
@@ -621,4 +671,24 @@ inputBar: {
     color: '#777',
     textAlign: 'center',
   },
+
+  patternImage: {
+  opacity: 0.06,
+},
+
+sendIcon: {
+  width: 22,
+  height: 22,
+},
+
+bottomShadow: {
+  position: 'absolute',
+  left: 0,
+  right: 0,
+  bottom: 0,
+  height: Platform.OS === 'android' ? 230 : 180,
+  zIndex: 5,
+  elevation: 5,
+},
+
 });

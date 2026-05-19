@@ -7,7 +7,7 @@ import {
   getReactNativePersistence,
 } from 'firebase/auth';
 
-const firebaseConfig = {
+ export const firebaseConfig = {
   apiKey: "AIzaSyCf2CdqREQGnz-SoU5aBW9pivoYY6jCxns",
   authDomain: "knokknok-ea86d.firebaseapp.com",
   projectId: "knokknok-ea86d",

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import {
   Animated,
   Dimensions,
+  Easing,
   StyleSheet,
   View,
 } from 'react-native';
@@ -10,43 +11,81 @@ const { width } = Dimensions.get('window');
 
 export default function SplashScreen({ navigation }) {
   const bgAnim = useRef(new Animated.Value(0)).current;
+
   const yellowHouseOpacity = useRef(new Animated.Value(1)).current;
   const blackHouseOpacity = useRef(new Animated.Value(0)).current;
 
-  const logoScale = useRef(new Animated.Value(1.65)).current;
-  const logoMoveX = useRef(new Animated.Value(0)).current;
+  const houseMoveY = useRef(new Animated.Value(160)).current;
+  const houseMoveX = useRef(new Animated.Value(0)).current;
+  const houseScale = useRef(new Animated.Value(0.75)).current;
+  const houseRotate = useRef(new Animated.Value(0)).current;
 
   const wordOpacity = useRef(new Animated.Value(0)).current;
-  const wordMoveX = useRef(new Animated.Value(22)).current;
+  const wordMoveX = useRef(new Animated.Value(26)).current;
 
   useEffect(() => {
     Animated.sequence([
-      Animated.delay(700),
+      Animated.parallel([
+        Animated.timing(houseMoveY, {
+          toValue: 0,
+          duration: 700,
+          easing: Easing.out(Easing.back(1.2)),
+          useNativeDriver: true,
+        }),
+        Animated.timing(houseRotate, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(houseScale, {
+          toValue: 1.65,
+          duration: 700,
+          easing: Easing.out(Easing.back(1.1)),
+          useNativeDriver: true,
+        }),
+      ]),
+
+      Animated.sequence([
+        Animated.timing(houseScale, {
+          toValue: 1.82,
+          duration: 180,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(houseScale, {
+          toValue: 1.65,
+          duration: 220,
+          easing: Easing.out(Easing.back(1.5)),
+          useNativeDriver: true,
+        }),
+      ]),
+
+      Animated.delay(180),
 
       Animated.parallel([
         Animated.timing(bgAnim, {
           toValue: 1,
-          duration: 650,
+          duration: 520,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: false,
         }),
         Animated.timing(yellowHouseOpacity, {
           toValue: 0,
-          duration: 350,
+          duration: 360,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(blackHouseOpacity, {
           toValue: 1,
-          duration: 350,
+          duration: 360,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
-        Animated.timing(logoScale, {
+        Animated.timing(houseScale, {
           toValue: 0.82,
-          duration: 650,
-          useNativeDriver: true,
-        }),
-        Animated.timing(logoMoveX, {
-          toValue: -78,
-          duration: 650,
+          duration: 520,
+          easing: Easing.inOut(Easing.ease),
           useNativeDriver: true,
         }),
       ]),
@@ -54,19 +93,29 @@ export default function SplashScreen({ navigation }) {
       Animated.delay(120),
 
       Animated.parallel([
+        Animated.timing(houseMoveX, {
+          toValue: -78,
+          duration: 650,
+          easing: Easing.out(Easing.cubic),
+          useNativeDriver: true,
+        }),
         Animated.timing(wordOpacity, {
           toValue: 1,
-          duration: 650,
+          duration: 520,
+          delay: 160,
+          easing: Easing.out(Easing.ease),
           useNativeDriver: true,
         }),
         Animated.timing(wordMoveX, {
           toValue: 0,
-          duration: 650,
+          duration: 620,
+          delay: 160,
+          easing: Easing.out(Easing.cubic),
           useNativeDriver: true,
         }),
       ]),
 
-      Animated.delay(800),
+      Animated.delay(900),
     ]).start(() => {
       navigation.replace('Welcome');
     });
@@ -74,7 +123,12 @@ export default function SplashScreen({ navigation }) {
 
   const backgroundColor = bgAnim.interpolate({
     inputRange: [0, 1],
-    outputRange: ['#000000', '#FFFFFF'],
+    outputRange: ['#2B2B2B', '#FFFFFF'],
+  });
+
+  const rotate = houseRotate.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['-18deg', '0deg'],
   });
 
   return (
@@ -85,8 +139,10 @@ export default function SplashScreen({ navigation }) {
             styles.houseWrap,
             {
               transform: [
-                { translateX: logoMoveX },
-                { scale: logoScale },
+                { translateX: houseMoveX },
+                { translateY: houseMoveY },
+                { rotate },
+                { scale: houseScale },
               ],
             },
           ]}
@@ -148,8 +204,8 @@ const styles = StyleSheet.create({
   },
 
   houseLogo: {
-    width: 86,
-    height: 86,
+    width: 102,
+    height: 102,
   },
 
   absoluteLogo: {

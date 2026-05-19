@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   Image,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import { useAppState } from '../providers/AppProvider';
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import { saveProfileToFirebase } from '../services/profileService';
 
@@ -19,6 +22,36 @@ export default function AccommodationTypeScreen({ navigation }) {
   const [openToAnything, setOpenToAnything] = useState(false);
 
   const { updateProfile } = useAppState();
+
+  const circleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
 
   const toggleSelection = (item, selectedItems, setSelectedItems) => {
     setOpenToAnything(false);
@@ -79,20 +112,60 @@ export default function AccommodationTypeScreen({ navigation }) {
   };
 
   return (
-    <AppScreen padded={false}>
+    <View style={styles.screen}>
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && (
+          <View style={styles.androidSoftOverlay} />
+        )}
+      </View>
+
       <View style={styles.container}>
         <ScrollView
-  style={styles.topContent}
-  contentContainerStyle={styles.topContentInner}
-  showsVerticalScrollIndicator={false}
->
+          style={styles.topContent}
+          contentContainerStyle={styles.topContentInner}
+          showsVerticalScrollIndicator={false}
+        >
           <Text style={styles.title}>Type of Accommodation</Text>
-          <Text style={styles.subtitle}>Select all that apply</Text>
+
+          <Text style={styles.subtitle}>
+            Select all that apply
+          </Text>
 
           <View style={styles.grid}>
             <SelectCard
               title="House"
-              icon={require('../../assets/icons/tenant.png')}
+              icon={require('../../assets/icons/accommodation.png')}
               selected={selectedAccommodation.includes('House')}
               onPress={() =>
                 toggleSelection(
@@ -205,7 +278,9 @@ export default function AccommodationTypeScreen({ navigation }) {
               ]}
             />
 
-            <Text style={styles.openText}>I’m open to anything</Text>
+            <Text style={styles.openText}>
+              I’m open to anything
+            </Text>
           </Pressable>
         </ScrollView>
 
@@ -215,19 +290,67 @@ export default function AccommodationTypeScreen({ navigation }) {
             <View style={styles.dot} />
             <View style={styles.dot} />
             <View style={[styles.dot, styles.activeDot]} />
+            <View style={styles.dot} />
           </View>
 
-          <CustomButton title="Next" onPress={handleNext} />
+          <CustomButton
+            title="Next"
+            onPress={handleNext}
+            style={styles.buttonShadow}
+          />
         </View>
       </View>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FDF4D4',
+    overflow: 'hidden',
+  },
+
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
+  },
+
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FDF4D4',
+  },
+
+  colorBlob: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+  },
+
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
     paddingBottom: 40,
@@ -236,6 +359,10 @@ const styles = StyleSheet.create({
   topContent: {
     flex: 1,
     marginTop: 20,
+  },
+
+  topContentInner: {
+    paddingBottom: 24,
   },
 
   title: {
@@ -295,11 +422,11 @@ const styles = StyleSheet.create({
     transform: [{ scale: 0.985 }],
   },
 
- optionIcon: {
-  width: 36,
-  height: 36,
-  marginBottom: 10,
-},
+  optionIcon: {
+    width: 36,
+    height: 36,
+    marginBottom: 10,
+  },
 
   optionText: {
     fontSize: 16,
@@ -308,7 +435,6 @@ const styles = StyleSheet.create({
     fontFamily: 'IBM Plex Sans JP',
     textAlign: 'center',
     width: '100%',
-    
   },
 
   optionTextSelected: {
@@ -349,7 +475,7 @@ const styles = StyleSheet.create({
 
   openCircleSelected: {
     backgroundColor: '#ffff',
-    borderColor: "#ffff",
+    borderColor: '#ffff',
   },
 
   openText: {
@@ -372,9 +498,9 @@ const styles = StyleSheet.create({
   },
 
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 8,
     backgroundColor: 'rgba(43,43,43,0.18)',
   },
 
@@ -383,7 +509,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#2B2B2B',
   },
 
-  topContentInner: {
-  paddingBottom: 24,
-},
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
 });

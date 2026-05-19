@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -10,9 +12,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { FirebaseRecaptchaVerifierModal } from 'expo-firebase-recaptcha';
+import { PhoneAuthProvider } from 'firebase/auth';
 
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
+import { auth, firebaseConfig } from '../firebase/firebaseConfig';
 
 const countryCodes = [
   { country: 'Ireland', code: '+353', flag: '🇮🇪' },
@@ -29,6 +34,37 @@ export default function PhoneNumberScreen({ navigation }) {
   const [showCountryPicker, setShowCountryPicker] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const recaptchaVerifier = useRef(null);
+  const circleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
+
   const handleSendCode = async () => {
     const localNumber = phoneNumber.replace(/\s/g, '').trim();
 
@@ -42,19 +78,67 @@ export default function PhoneNumberScreen({ navigation }) {
     try {
       setLoading(true);
 
+      const phoneProvider = new PhoneAuthProvider(auth);
+
+      const verificationId = await phoneProvider.verifyPhoneNumber(
+        fullPhoneNumber,
+        recaptchaVerifier.current
+      );
+
       navigation.navigate('VerificationCode', {
         phoneNumber: fullPhoneNumber,
+        verificationId,
       });
     } catch (error) {
       console.log('Send code error:', error);
-      Alert.alert('Could not send code', 'Check the number and try again.');
+      Alert.alert('Could not send code', error.message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <AppScreen padded={false}>
+    <View style={styles.screen}>
+      <FirebaseRecaptchaVerifierModal
+        ref={recaptchaVerifier}
+        firebaseConfig={firebaseConfig}
+      />
+
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && <View style={styles.androidSoftOverlay} />}
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -78,14 +162,8 @@ export default function PhoneNumberScreen({ navigation }) {
                 ]}
                 onPress={() => setShowCountryPicker(true)}
               >
-                <Text style={styles.countryFlag}>
-                  {selectedCountry.flag}
-                </Text>
-
-                <Text style={styles.countryCode}>
-                  {selectedCountry.code}
-                </Text>
-
+                <Text style={styles.countryFlag}>{selectedCountry.flag}</Text>
+                <Text style={styles.countryCode}>{selectedCountry.code}</Text>
                 <Text style={styles.chevron}>⌄</Text>
               </Pressable>
 
@@ -110,12 +188,11 @@ export default function PhoneNumberScreen({ navigation }) {
               <View style={styles.dot} />
             </View>
 
-            <View style={styles.buttonWrapper}>
-              <CustomButton
-                title={loading ? 'Sending...' : 'Next'}
-                onPress={handleSendCode}
-              />
-            </View>
+            <CustomButton
+              title={loading ? 'Sending...' : 'Next'}
+              onPress={handleSendCode}
+              style={styles.buttonShadow}
+            />
           </View>
         </View>
 
@@ -130,9 +207,7 @@ export default function PhoneNumberScreen({ navigation }) {
             onPress={() => setShowCountryPicker(false)}
           >
             <View style={styles.countrySheet}>
-              <Text style={styles.sheetTitle}>
-                Choose country code
-              </Text>
+              <Text style={styles.sheetTitle}>Choose country code</Text>
 
               {countryCodes.map((item) => (
                 <Pressable
@@ -143,18 +218,11 @@ export default function PhoneNumberScreen({ navigation }) {
                     setShowCountryPicker(false);
                   }}
                 >
-                  <Text style={styles.optionFlag}>
-                    {item.flag}
-                  </Text>
+                  <Text style={styles.optionFlag}>{item.flag}</Text>
 
                   <View style={styles.optionTextWrap}>
-                    <Text style={styles.optionCountry}>
-                      {item.country}
-                    </Text>
-
-                    <Text style={styles.optionCode}>
-                      {item.code}
-                    </Text>
+                    <Text style={styles.optionCountry}>{item.country}</Text>
+                    <Text style={styles.optionCode}>{item.code}</Text>
                   </View>
 
                   {selectedCountry.code === item.code && (
@@ -166,33 +234,46 @@ export default function PhoneNumberScreen({ navigation }) {
           </Pressable>
         </Modal>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  flex: {
-    flex: 1,
+  screen: { flex: 1, backgroundColor: '#FDF4D4', overflow: 'hidden' },
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
   },
-
+  flex: { flex: 1 },
+  backgroundLayer: { ...StyleSheet.absoluteFillObject, backgroundColor: '#FDF4D4' },
+  colorBlob: { position: 'absolute', width: 560, height: 560, borderRadius: 280 },
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
     paddingBottom: 40,
     justifyContent: 'flex-start',
   },
-
-  topContent: {
-    flex: 1,
-    marginTop: 20,
-  },
-
-  bottomContent: {
-    marginBottom: 24,
-  },
-
+  topContent: { flex: 1, marginTop: 20 },
+  bottomContent: { marginBottom: 24 },
   title: {
     fontSize: 24,
     fontWeight: '800',
@@ -200,7 +281,6 @@ const styles = StyleSheet.create({
     marginBottom: 14,
     fontFamily: 'IBM Plex Sans JP',
   },
-
   description: {
     fontSize: 16,
     color: '#2F2F2F',
@@ -209,7 +289,6 @@ const styles = StyleSheet.create({
     marginBottom: 42,
     fontFamily: 'IBM Plex Sans JP',
   },
-
   inputLabel: {
     fontSize: 14,
     fontWeight: '700',
@@ -217,12 +296,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     fontFamily: 'IBM Plex Sans JP',
   },
-
-  phoneRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-
+  phoneRow: { flexDirection: 'row', gap: 10 },
   countryButton: {
     height: 58,
     minWidth: 112,
@@ -235,30 +309,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-
-  fieldPressed: {
-    backgroundColor: '#F6F6F6',
-  },
-
-  countryFlag: {
-    fontSize: 18,
-    marginRight: 6,
-  },
-
+  fieldPressed: { backgroundColor: '#F6F6F6' },
+  countryFlag: { fontSize: 18, marginRight: 6 },
   countryCode: {
     fontSize: 15,
     fontWeight: '700',
     color: '#111',
     fontFamily: 'IBM Plex Sans JP',
   },
-
-  chevron: {
-    fontSize: 18,
-    color: '#555',
-    marginLeft: 6,
-    marginTop: -10,
-  },
-
+  chevron: { fontSize: 18, color: '#555', marginLeft: 6, marginTop: -10 },
   input: {
     flex: 1,
     height: 58,
@@ -271,36 +330,31 @@ const styles = StyleSheet.create({
     color: '#111',
     fontFamily: 'IBM Plex Sans JP',
   },
-
   carouselDots: {
     flexDirection: 'row',
     justifyContent: 'center',
     gap: 8,
     marginBottom: 18,
   },
-
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 8,
     backgroundColor: 'rgba(43,43,43,0.18)',
   },
-
-  activeDot: {
-    width: 22,
-    backgroundColor: '#2B2B2B',
+  activeDot: { width: 22, backgroundColor: '#2B2B2B' },
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
-
-  buttonWrapper: {
-    width: '100%',
-  },
-
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.18)',
     justifyContent: 'flex-end',
   },
-
   countrySheet: {
     backgroundColor: '#FFFFFF',
     borderTopLeftRadius: 28,
@@ -309,7 +363,6 @@ const styles = StyleSheet.create({
     paddingTop: 22,
     paddingBottom: 36,
   },
-
   sheetTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -317,7 +370,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     fontFamily: 'IBM Plex Sans JP',
   },
-
   countryOption: {
     minHeight: 58,
     borderRadius: 18,
@@ -327,30 +379,20 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     backgroundColor: '#F8F8F8',
   },
-
-  optionFlag: {
-    fontSize: 22,
-    marginRight: 12,
-  },
-
-  optionTextWrap: {
-    flex: 1,
-  },
-
+  optionFlag: { fontSize: 22, marginRight: 12 },
+  optionTextWrap: { flex: 1 },
   optionCountry: {
     fontSize: 15,
     fontWeight: '700',
     color: '#111',
     fontFamily: 'IBM Plex Sans JP',
   },
-
   optionCode: {
     fontSize: 13,
     color: '#777',
     marginTop: 2,
     fontFamily: 'IBM Plex Sans JP',
   },
-
   selectedCheck: {
     fontSize: 18,
     fontWeight: '800',

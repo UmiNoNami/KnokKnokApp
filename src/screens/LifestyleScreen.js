@@ -1,15 +1,17 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
+  Easing,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 
 import { useAppState } from '../providers/AppProvider';
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import { saveProfileToFirebase } from '../services/profileService';
 
@@ -77,17 +79,9 @@ function LifestyleChip({ label, selected, onPress }) {
       <Animated.View style={{ transform: [{ scale }] }}>
         <Pressable
           onPress={handlePress}
-          style={[
-            styles.chip,
-            selected && styles.chipSelected,
-          ]}
+          style={[styles.chip, selected && styles.chipSelected]}
         >
-          <Text
-            style={[
-              styles.chipText,
-              selected && styles.chipTextSelected,
-            ]}
-          >
+          <Text style={[styles.chipText, selected && styles.chipTextSelected]}>
             {label}
           </Text>
         </Pressable>
@@ -104,6 +98,36 @@ function LifestyleChip({ label, selected, onPress }) {
 export default function LifestyleScreen({ navigation }) {
   const [selectedItems, setSelectedItems] = useState([]);
   const { updateProfile } = useAppState();
+
+  const circleAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
+
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
 
   const toggleItem = (item) => {
     if (selectedItems.includes(item)) {
@@ -147,7 +171,44 @@ export default function LifestyleScreen({ navigation }) {
   };
 
   return (
-    <AppScreen padded={false}>
+    <View style={styles.screen}>
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && (
+          <View style={styles.androidSoftOverlay} />
+        )}
+      </View>
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.scrollContent}
@@ -198,6 +259,7 @@ export default function LifestyleScreen({ navigation }) {
             <View style={styles.dot} />
             <View style={styles.dot} />
             <View style={styles.dot} />
+            <View style={styles.dot} />
             <View style={[styles.dot, styles.activeDot]} />
           </View>
 
@@ -205,18 +267,64 @@ export default function LifestyleScreen({ navigation }) {
             title="Next"
             onPress={handleNext}
             disabled={selectedItems.length === 0}
-            style={selectedItems.length === 0 && styles.disabledButton}
+            style={[
+              styles.buttonShadow,
+              selectedItems.length === 0 && styles.disabledButton,
+            ]}
           />
         </View>
       </ScrollView>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FDF4D4',
+    overflow: 'hidden',
+  },
+
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
+  },
+
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FDF4D4',
+  },
+
+  colorBlob: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+  },
+
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
     paddingHorizontal: 32,
     paddingTop: 70,
   },
@@ -262,7 +370,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    
   },
 
   chipSelected: {
@@ -283,14 +390,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  splash: {
-    position: 'absolute',
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
-  },
-
   bottomContent: {
     marginTop: 18,
     marginBottom: 24,
@@ -304,9 +403,9 @@ const styles = StyleSheet.create({
   },
 
   dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
+    width: 9,
+    height: 9,
+    borderRadius: 8,
     backgroundColor: 'rgba(43,43,43,0.18)',
   },
 
@@ -319,44 +418,52 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
 
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
+  },
+
   chipOuter: {
-  position: 'relative',
-  overflow: 'visible',
-},
+    position: 'relative',
+    overflow: 'visible',
+  },
 
-spark: {
-  position: 'absolute',
-  right: 8,
-  top: -2,
-  width: 8,
-  height: 8,
-  borderRadius: 4,
-  backgroundColor: '#eafa08',
-  zIndex: 10,
-},
+  spark: {
+    position: 'absolute',
+    right: 8,
+    top: -2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#eafa08',
+    zIndex: 10,
+  },
 
-sparkOne: {
-  backgroundColor: '#f8e409',
-},
+  sparkOne: {
+    backgroundColor: '#f8e409',
+  },
 
-sparkTwo: {
-  backgroundColor: '#f7d306',
-  borderWidth: 1,
-  borderColor: '#faf608',
-},
+  sparkTwo: {
+    backgroundColor: '#f7d306',
+    borderWidth: 1,
+    borderColor: '#faf608',
+  },
 
-sparkThree: {
-  backgroundColor: '#fae205',
-},
+  sparkThree: {
+    backgroundColor: '#fae205',
+  },
 
-sparkDot: {
-  position: 'absolute',
-  right: 10,
-  top: 0,
-  width: 5,
-  height: 5,
-  borderRadius: 3,
-  backgroundColor: '#e7f706',
-  zIndex: 10,
-},
+  sparkDot: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    width: 5,
+    height: 5,
+    borderRadius: 3,
+    backgroundColor: '#e7f706',
+    zIndex: 10,
+  },
 });

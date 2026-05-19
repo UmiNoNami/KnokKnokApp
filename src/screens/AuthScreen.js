@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -8,12 +10,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
 } from 'firebase/auth';
 
-import AppScreen from '../components/AppScreen';
 import CustomButton from '../components/CustomButton';
 import { auth } from '../firebase/firebaseConfig';
 import { useAppState } from '../providers/AppProvider';
@@ -24,62 +26,116 @@ export default function AuthScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
- const handleAuth = async () => {
-  const cleanEmail = email.trim();
+  const circleAnim = useRef(new Animated.Value(0)).current;
 
-  if (!cleanEmail || !password) {
-    Alert.alert('Missing details', 'Please enter email and password.');
-    return;
-  }
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(circleAnim, {
+        toValue: 1,
+        duration: 18000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, []);
 
-  try {
-    await signInWithEmailAndPassword(auth, cleanEmail, password);
+  const circularMove = (x1, x2, y1, y2) => ({
+    transform: [
+      {
+        translateX: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [x1, x2, x1],
+        }),
+      },
+      {
+        translateY: circleAnim.interpolate({
+          inputRange: [0, 0.5, 1],
+          outputRange: [y1, y2, y1],
+        }),
+      },
+    ],
+  });
 
-    signIn();
-    navigation.navigate('UserDetails');
-  } catch (error) {
-    if (
-      error.code === 'auth/user-not-found' ||
-      error.code === 'auth/invalid-credential'
-    ) {
-      try {
-        await createUserWithEmailAndPassword(
-          auth,
-          cleanEmail,
-          password
-        );
+  const handleAuth = async () => {
+    const cleanEmail = email.trim();
 
-        signIn();
-        navigation.navigate('UserDetails');
-      } catch (createError) {
-        Alert.alert(
-          'Authentication failed',
-          createError.message
-        );
-      }
-
+    if (!cleanEmail || !password) {
+      Alert.alert('Missing details', 'Please enter email and password.');
       return;
     }
 
-    Alert.alert(
-      'Login failed',
-      'Wrong password or account already exists.'
-    );
-  }
-};
+    try {
+      await signInWithEmailAndPassword(auth, cleanEmail, password);
+      signIn();
+      navigation.navigate('UserDetails');
+    } catch (error) {
+      if (
+        error.code === 'auth/user-not-found' ||
+        error.code === 'auth/invalid-credential'
+      ) {
+        try {
+          await createUserWithEmailAndPassword(auth, cleanEmail, password);
+          signIn();
+          navigation.navigate('UserDetails');
+        } catch (createError) {
+          Alert.alert('Authentication failed', createError.message);
+        }
+
+        return;
+      }
+
+      Alert.alert('Login failed', 'Wrong password or account already exists.');
+    }
+  };
 
   return (
-    <AppScreen>
+    <View style={styles.screen}>
+      <View style={styles.backgroundLayer}>
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.yellowBlob,
+            circularMove(-120, 120, 80, -80),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.greyBlob,
+            circularMove(80, -80, -60, 60),
+          ]}
+        />
+
+        <Animated.View
+          style={[
+            styles.colorBlob,
+            styles.creamBlob,
+            circularMove(-90, 90, -70, 70),
+          ]}
+        />
+
+        <BlurView
+          intensity={Platform.OS === 'android' ? 45 : 60}
+          tint="light"
+          experimentalBlurMethod="dimezisBlurView"
+          style={StyleSheet.absoluteFill}
+        />
+
+        {Platform.OS === 'android' && <View style={styles.androidSoftOverlay} />}
+      </View>
+
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.container}>
           <View>
-            <Text style={styles.title}>Welcome back</Text>
+            <Text style={styles.title}>What’s your email address?</Text>
 
             <Text style={styles.description}>
-              Sign in or create your account with your email.
+              Use this email for account access and important notifications. It
+              will remain private.
             </Text>
 
             <TextInput
@@ -104,25 +160,72 @@ export default function AuthScreen({ navigation }) {
           </View>
 
           <View style={styles.buttonWrapper}>
-            <CustomButton title="Continue" onPress={handleAuth} />
+            <CustomButton
+              title="Next"
+              onPress={handleAuth}
+              style={styles.buttonShadow}
+            />
           </View>
         </View>
       </KeyboardAvoidingView>
-    </AppScreen>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: {
+    flex: 1,
+    backgroundColor: '#FDF4D4',
+    overflow: 'hidden',
+  },
+
+  androidSoftOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(253, 244, 212, 0.35)',
+  },
+
   flex: {
     flex: 1,
   },
 
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: '#FDF4D4',
+  },
+
+  colorBlob: {
+    position: 'absolute',
+    width: 560,
+    height: 560,
+    borderRadius: 280,
+  },
+
+  yellowBlob: {
+    backgroundColor: '#F4B400',
+    left: -170,
+    bottom: -180,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.62,
+  },
+
+  greyBlob: {
+    backgroundColor: '#E8E7E3',
+    right: -180,
+    top: -80,
+    opacity: 0.9,
+  },
+
+  creamBlob: {
+    backgroundColor: '#FDF4D4',
+    left: -120,
+    top: -120,
+    opacity: Platform.OS === 'android' ? 0.9 : 0.95,
+  },
+
   container: {
     flex: 1,
-    backgroundColor: '#F4F4F4',
     paddingHorizontal: 32,
-    paddingTop: 70,
-    paddingBottom: 40,
+    paddingTop: 110,
+    paddingBottom: 56,
     justifyContent: 'space-between',
   },
 
@@ -130,15 +233,16 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '800',
     color: '#2A2A2A',
-    marginBottom: 14,
+    marginBottom: 16,
+    fontFamily: 'IBM Plex Sans JP',
   },
 
   description: {
     fontSize: 16,
-    color: '#2F2F2F',
-    lineHeight: 24,
-    maxWidth: 320,
-    marginBottom: 42,
+    color: '#111',
+    lineHeight: 22,
+    marginBottom: 90,
+    fontFamily: 'IBM Plex Sans JP',
   },
 
   input: {
@@ -146,16 +250,25 @@ const styles = StyleSheet.create({
     height: 58,
     borderRadius: 18,
     borderWidth: 1,
-    borderColor: '#D8D3CB',
-    backgroundColor: '#F4F4F4',
+    borderColor: 'rgba(43,43,43,0.14)',
+    backgroundColor: '#FFFFFF',
     paddingHorizontal: 16,
     fontSize: 16,
     color: '#111',
     marginBottom: 16,
+    fontFamily: 'IBM Plex Sans JP',
   },
 
   buttonWrapper: {
     width: '100%',
     marginBottom: 24,
+  },
+
+  buttonShadow: {
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 5,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 5,
   },
 });
